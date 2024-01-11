@@ -93,7 +93,12 @@ impl CircuitWitness {
             max_keccak_rows: circuit_config.keccak_padding,
         };
         let builder = BuilderClient::new(geth_client, circuit_params).await?;
+        println!("about to gen_inputs {}", *block_num);
+        // let cfg = serialize(&GethLoggerConfig::default());
+        // println!("cfg {}", cfg);
+
         let (builder, eth_block) = builder.gen_inputs(*block_num).await?;
+        println!("back from gen_inputs {}", *block_num);
 
         Ok(Self {
             circuit_config,
@@ -104,8 +109,10 @@ impl CircuitWitness {
     }
 
     pub fn evm_witness(&self) -> zkevm_circuits::witness::Block<Fr> {
+        println!("evm_witness 1");
         let mut block =
             evm_circuit::witness::block_convert(&self.block, &self.code_db).expect("block_convert");
+        println!("evm_witness 2");
         block.exp_circuit_pad_to = self.circuit_config.pad_to;
         // fixed randomness used in PublicInput contract and SuperCircuit
         block.randomness = Fr::from(0x100);
