@@ -10,12 +10,14 @@ use eth_types::ToBigEndian;
 use eth_types::Word;
 use eth_types::H256;
 use ethers_providers::Http;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use zkevm_circuits::evm_circuit;
 use zkevm_circuits::pi_circuit::PublicData;
 use zkevm_common::prover::CircuitConfig;
 
 /// Wrapper struct for circuit witness data.
+#[derive(Serialize, Deserialize)]
 pub struct CircuitWitness {
     pub circuit_config: CircuitConfig,
     pub eth_block: eth_types::Block<eth_types::Transaction>,
@@ -107,6 +109,50 @@ impl CircuitWitness {
             code_db: builder.code_db,
         })
     }
+
+    // /// Gathers debug trace(s) from `rpc_url` for block `block_num`.
+    // /// Expects a go-ethereum node with debug & archive capabilities on `rpc_url`.
+    // pub async fn without_rpc(
+    //     block_num: &u64,
+    //     rpc_url: &str,
+    // ) -> Result<Self, Box<dyn std::error::Error>> {
+    //     let url = Http::from_str(rpc_url)?;
+    //     let geth_client = GethClient::new(url);
+    //     // TODO: add support for `eth_getHeaderByNumber`
+    //     let block = geth_client.get_block_by_number((*block_num).into()).await?;
+    //     let circuit_config =
+    //         crate::match_circuit_params!(block.gas_used.as_usize(), CIRCUIT_CONFIG, {
+    //             return Err(format!(
+    //                 "No circuit parameters found for block with gas used={}",
+    //                 block.gas_used
+    //             )
+    //             .into());
+    //         });
+    //     let circuit_params = CircuitsParams {
+    //         max_txs: circuit_config.max_txs,
+    //         max_calldata: circuit_config.max_calldata,
+    //         max_bytecode: circuit_config.max_bytecode,
+    //         max_rws: circuit_config.max_rws,
+    //         max_copy_rows: circuit_config.max_copy_rows,
+    //         max_exp_steps: circuit_config.max_exp_steps,
+    //         max_evm_rows: circuit_config.pad_to,
+    //         max_keccak_rows: circuit_config.keccak_padding,
+    //     };
+    //     let builder = BuilderClient::new(geth_client, circuit_params).await?;
+    //     println!("about to gen_inputs {}", *block_num);
+    //     // let cfg = serialize(&GethLoggerConfig::default());
+    //     // println!("cfg {}", cfg);
+
+    //     let (builder, eth_block) = builder.gen_inputs(*block_num).await?;
+    //     println!("back from gen_inputs {}", *block_num);
+
+    //     Ok(Self {
+    //         circuit_config,
+    //         eth_block,
+    //         block: builder.block,
+    //         code_db: builder.code_db,
+    //     })
+    // }
 
     pub fn evm_witness(&self) -> zkevm_circuits::witness::Block<Fr> {
         println!("evm_witness 1");

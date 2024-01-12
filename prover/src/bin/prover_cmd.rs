@@ -8,6 +8,7 @@ use zkevm_common::prover::*;
 /// - PROVERD_BLOCK_NUM - the block number to generate the proof for
 /// - PROVERD_RPC_URL - a geth http rpc that supports the debug namespace
 /// - PROVERD_PARAMS_PATH - a path to a file generated with the gen_params tool
+/// - PROVERD_WITNESS_PATH - a path to a file that will receive a witness, instead of doing a proof
 #[tokio::main]
 async fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
@@ -24,6 +25,11 @@ async fn main() {
         .expect("PROVERD_PARAMS_PATH env var")
         .parse()
         .expect("Cannot parse PROVERD_PARAMS_PATH env var");
+    let witness: Option<String> = var("PROVERD_WITNESS_PATH").ok();
+    println!("asdf: witness {:?}", witness);
+    // .expect("PROVERD_WITNESS_PATH env var")
+    // .parse()
+    // .expect("Cannot parse PROVERD_WITNESS_PATH env var");
 
     let state = SharedState::new(String::new(), None);
     let request = ProofRequestOptions {
@@ -32,6 +38,7 @@ async fn main() {
         rpc: rpc_url,
         retry: false,
         param: Some(params_path),
+        witness,
         mock: false,
         aggregate: false,
         ..Default::default()

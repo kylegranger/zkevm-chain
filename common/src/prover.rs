@@ -74,6 +74,9 @@ pub struct ProofRequestOptions {
     /// Parameters file or directory to use.
     /// Otherwise generates them on the fly.
     pub param: Option<String>,
+    /// Witness file to serialize
+    /// Otherwise perform proof.
+    pub witness: Option<String>,
     /// Only use MockProver if true.
     #[serde(default = "default_bool")]
     pub mock: bool,

@@ -16,10 +16,11 @@ use halo2_proofs::poly::commitment::Params;
 use halo2_proofs::SerdeFormat;
 use hyper::Uri;
 use rand::{thread_rng, Rng};
+use serde_json::json;
 use snark_verifier::system::halo2::transcript::evm::EvmTranscript;
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::fs::File;
+use std::fs::{write, File};
 use std::io::Write as IoWrite;
 use std::net::ToSocketAddrs;
 use std::path::{Path, PathBuf};
@@ -408,6 +409,8 @@ impl SharedState {
         let task_options = task_options.unwrap();
         log::info!("compute_proof: {:#?}", task_options);
 
+        // load our data
+
         // Note: this catches any panics for the task itself but will not help in the
         // situation when the process get itself OOM killed, stack overflows etc.
         // This could be avoided by spawning a subprocess for the proof computation
@@ -419,10 +422,33 @@ impl SharedState {
             let self_copy = self.clone();
 
             tokio::spawn(async move {
+                // if task_options_copy.witness.is_some() {
                 let witness =
                     CircuitWitness::from_rpc(&task_options_copy.block, &task_options_copy.rpc)
                         .await
                         .map_err(|e| e.to_string())?;
+                let jwitness = json!(witness).to_string();
+                // let jwitness = json!(witness.block).to_string();
+                // let jwitness = json!(witness.circuit_config).to_string();
+                // let jwitness = json!(witness.code_db).to_string();
+                // let jwitness = json!(witness).to_string();
+                write(task_options_copy.witness.clone().unwrap(), jwitness).unwrap();
+                // }
+
+                let jwitness =
+                    std::fs::read_to_string(task_options_copy.clone().witness.unwrap()).unwrap();
+                let witness: CircuitWitness = serde_json::from_str(&jwitness).unwrap();
+
+                // println!("asdf: witness circuit_config {:?}", witness.circuit_config);
+                // println!("asdf: witness eth_block {:?}", witness.eth_block);
+                // println!("asdf: witness block {:?}", witness.block);
+                // println!("asdf: witness code_db {:?}", witness.code_db);
+                // panic!("asdf: done!");
+
+                // pub circuit_config: CircuitConfig,
+                // pub eth_block: eth_types::Block<eth_types::Transaction>,
+                // pub block: bus_mapping::circuit_input_builder::Block,
+                // pub code_db: bus_mapping::state_db::CodeDB,
 
                 let (config, circuit_proof, aggregation_proof) = crate::match_circuit_params!(
                     witness.gas_used(),
