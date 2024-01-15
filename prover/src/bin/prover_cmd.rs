@@ -33,7 +33,8 @@ async fn main() {
 
     let state = SharedState::new(String::new(), None);
     let request = ProofRequestOptions {
-        circuit: "super".to_string(),
+        // asdf circuit: "super".to_string(),
+        circuit: "pi".to_string(),
         block: block_num,
         rpc: rpc_url,
         retry: false,

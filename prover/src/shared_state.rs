@@ -87,6 +87,8 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr>>(
         ),
         ..Default::default()
     };
+
+    println!("proof 1");
     let mut aggregation_proof = ProofResult {
         label: format!(
             "{}-{}-a",
@@ -94,6 +96,7 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr>>(
         ),
         ..Default::default()
     };
+    println!("proof 2");
 
     if task_options.mock {
         // only run the mock prover
@@ -108,6 +111,8 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr>>(
         let (param, param_path) = get_or_gen_param(task_options, circuit_config.min_k);
         circuit_proof.k = param.k() as u8;
         // generate and cache the prover key
+        println!("proof 3");
+
         let pk = {
             let cache_key = format!(
                 "{}{}{:?}",
@@ -118,11 +123,14 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr>>(
                 .await
                 .map_err(|e| e.to_string())?
         };
+        println!("proof 4");
 
         let circuit_instance = circuit.instance();
         circuit_proof.instance = collect_instance(&circuit_instance);
+        println!("proof 5");
 
         if task_options.aggregate {
+            println!("proof 5.1");
             let proof = gen_proof::<_, _, PoseidonTranscript<_, _>, PoseidonTranscript<_, _>, _>(
                 &param,
                 &pk,
@@ -220,6 +228,7 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr>>(
             }
             aggregation_proof.proof = proof.into();
         } else {
+            println!("proof 5.2");
             let proof = gen_proof::<
                 _,
                 _,
@@ -236,6 +245,7 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr>>(
                 task_options.verify_proof,
                 &mut circuit_proof.aux,
             );
+            println!("proof 5.3");
             circuit_proof.proof = proof.into();
         }
     }
@@ -422,18 +432,13 @@ impl SharedState {
             let self_copy = self.clone();
 
             tokio::spawn(async move {
-                // if task_options_copy.witness.is_some() {
-                let witness =
-                    CircuitWitness::from_rpc(&task_options_copy.block, &task_options_copy.rpc)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                let jwitness = json!(witness).to_string();
-                // let jwitness = json!(witness.block).to_string();
-                // let jwitness = json!(witness.circuit_config).to_string();
-                // let jwitness = json!(witness.code_db).to_string();
+                // let witness =
+                //     CircuitWitness::from_rpc(&task_options_copy.block, &task_options_copy.rpc)
+                //         .await
+                //         .map_err(|e| e.to_string())?;
                 // let jwitness = json!(witness).to_string();
-                write(task_options_copy.witness.clone().unwrap(), jwitness).unwrap();
-                // }
+                // write(task_options_copy.witness.clone().unwrap(), jwitness).unwrap();
+                // panic!("asdf: done!");
 
                 let jwitness =
                     std::fs::read_to_string(task_options_copy.clone().witness.unwrap()).unwrap();
@@ -537,6 +542,8 @@ impl SharedState {
                     aggregation: aggregation_proof,
                     gas: witness.gas_used(),
                 };
+
+                println!("DONE: proofs: {:?}", res);
 
                 Ok(res)
             })
@@ -649,9 +656,11 @@ impl SharedState {
         aux: &mut ProofResultInstrumentation,
     ) -> Result<Arc<ProverKey>, Box<dyn std::error::Error>> {
         let mut rw = self.rw.lock().await;
+        println!("proof 3.1");
         if !rw.pk_cache.contains_key(cache_key) {
             // drop, potentially long running
             drop(rw);
+            println!("proof 3.2");
 
             let vk = {
                 let time_started = Instant::now();
@@ -659,12 +668,15 @@ impl SharedState {
                 aux.vk = Instant::now().duration_since(time_started).as_millis() as u32;
                 vk
             };
+            println!("proof 3.3");
+
             let pk = {
                 let time_started = Instant::now();
                 let pk = keygen_pk(param.as_ref(), vk, circuit)?;
                 aux.pk = Instant::now().duration_since(time_started).as_millis() as u32;
                 pk
             };
+            println!("proof 3.4");
             if std::env::var("PROVERD_DUMP").is_ok() {
                 pk.write(
                     &mut File::create(cache_key).unwrap(),
@@ -673,11 +685,13 @@ impl SharedState {
                 .unwrap();
             }
 
+            println!("proof 3.5");
             let pk = Arc::new(pk);
 
             // acquire lock and update
             rw = self.rw.lock().await;
             rw.pk_cache.insert(cache_key.to_string(), pk);
+            println!("proof 3.6");
 
             log::info!("ProvingKey: generated and cached key={}", cache_key);
         }
