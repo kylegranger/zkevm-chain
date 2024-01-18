@@ -430,30 +430,28 @@ impl SharedState {
         let task_result: Result<Result<Proofs, String>, tokio::task::JoinError> = {
             let task_options_copy = task_options.clone();
             let self_copy = self.clone();
-
+            let prover_mode = task_options_copy.prover_mode;
             tokio::spawn(async move {
-                // let witness =
-                //     CircuitWitness::from_rpc(&task_options_copy.block, &task_options_copy.rpc)
-                //         .await
-                //         .map_err(|e| e.to_string())?;
-                // let jwitness = json!(witness).to_string();
-                // write(task_options_copy.witness.clone().unwrap(), jwitness).unwrap();
-                // panic!("asdf: done!");
+                let witness = match prover_mode {
+                    1 | 3 => {
+                        CircuitWitness::from_rpc(&task_options_copy.block, &task_options_copy.rpc)
+                            .await
+                            .map_err(|e| e.to_string())?
+                    }
+                    2 => {
+                        let jwitness =
+                            std::fs::read_to_string(task_options_copy.clone().witness.unwrap())
+                                .unwrap();
+                        serde_json::from_str(&jwitness).unwrap()
+                    }
+                    _ => panic!("no valid PROVERD_MODE"),
+                };
 
-                let jwitness =
-                    std::fs::read_to_string(task_options_copy.clone().witness.unwrap()).unwrap();
-                let witness: CircuitWitness = serde_json::from_str(&jwitness).unwrap();
-
-                // println!("asdf: witness circuit_config {:?}", witness.circuit_config);
-                // println!("asdf: witness eth_block {:?}", witness.eth_block);
-                // println!("asdf: witness block {:?}", witness.block);
-                // println!("asdf: witness code_db {:?}", witness.code_db);
-                // panic!("asdf: done!");
-
-                // pub circuit_config: CircuitConfig,
-                // pub eth_block: eth_types::Block<eth_types::Transaction>,
-                // pub block: bus_mapping::circuit_input_builder::Block,
-                // pub code_db: bus_mapping::state_db::CodeDB,
+                if prover_mode == 1 {
+                    let jwitness = json!(witness).to_string();
+                    write(task_options_copy.witness.clone().unwrap(), jwitness).unwrap();
+                    panic!("asdf: done!");
+                }
 
                 let (config, circuit_proof, aggregation_proof) = crate::match_circuit_params!(
                     witness.gas_used(),

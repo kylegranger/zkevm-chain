@@ -67,6 +67,8 @@ pub struct ProofRequestOptions {
     pub circuit: String,
     /// the block number
     pub block: u64,
+    /// prover mode
+    pub prover_mode: u64,
     /// the rpc url
     pub rpc: String,
     /// retry proof computation if error

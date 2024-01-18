@@ -17,6 +17,10 @@ async fn main() {
         .expect("PROVERD_BLOCK_NUM env var")
         .parse()
         .expect("Cannot parse PROVERD_BLOCK_NUM env var");
+    let prover_mode: u64 = var("PROVERD_MODE")
+        .expect("PROVERD_MODE env var")
+        .parse()
+        .expect("Cannot parse PROVERD_BLOCK_NUM env var");
     let rpc_url: String = var("PROVERD_RPC_URL")
         .expect("PROVERD_RPC_URL env var")
         .parse()
@@ -33,9 +37,9 @@ async fn main() {
 
     let state = SharedState::new(String::new(), None);
     let request = ProofRequestOptions {
-        // asdf circuit: "super".to_string(),
-        circuit: "pi".to_string(),
+        circuit: "super".to_string(),
         block: block_num,
+        prover_mode,
         rpc: rpc_url,
         retry: false,
         param: Some(params_path),
