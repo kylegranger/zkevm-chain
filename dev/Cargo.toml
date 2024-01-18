@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-eth-types = { git = "https://github.com/taikoxyz/zkevm-circuits.git", branch = "feat/for-a6-release", features = [
+eth-types = { git = "https://github.com/kylegranger/zkevm-circuits.git", branch = "kyle-dev", features = [
     "warn-unimplemented",
 ] }
 serde = { version = "1.0.136", features = ["derive"] }

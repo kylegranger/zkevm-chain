@@ -24,14 +24,22 @@ async fn main() {
         .expect("PROVERD_PARAMS_PATH env var")
         .parse()
         .expect("Cannot parse PROVERD_PARAMS_PATH env var");
+    let prover_mode: u64 = var("PROVERD_MODE")
+        .expect("PROVERD_MODE env var")
+        .parse()
+        .expect("Cannot parse PROVERD_BLOCK_NUM env var");
+    let witness: Option<String> = var("PROVERD_WITNESS_PATH").ok();
+    println!("witness file: {:?}", witness);
 
     let state = SharedState::new(String::new(), None);
     let request = ProofRequestOptions {
         circuit: "super".to_string(),
         block: block_num,
+        prover_mode,
         rpc: rpc_url,
         retry: false,
         param: Some(params_path),
+        witness,
         mock: false,
         aggregate: false,
         ..Default::default()

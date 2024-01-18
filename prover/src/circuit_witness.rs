@@ -12,6 +12,7 @@ use eth_types::ToBigEndian;
 use eth_types::Word;
 use eth_types::H256;
 use ethers_providers::Http;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use zkevm_circuits::evm_circuit;
 use zkevm_circuits::pi_circuit::PublicData;
@@ -19,6 +20,8 @@ use zkevm_common::prover::ProofRequestOptions;
 use zkevm_common::prover::{CircuitConfig, RequestExtraInstance};
 
 /// Wrapper struct for circuit witness data.
+#[derive(Serialize, Deserialize)]
+
 pub struct CircuitWitness {
     pub circuit_config: CircuitConfig,
     pub eth_block: eth_types::Block<eth_types::Transaction>,
@@ -263,11 +266,10 @@ impl CircuitWitness {
     fn validate_proverable_block(
         block: &eth_types::Block<eth_types::Transaction>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        if block
-            .transactions
-            .iter()
-            .any(|tx| tx.transaction_type != Some(2u64.into()) || (tx.access_list.is_some() && !tx.access_list.as_ref().unwrap().0.is_empty()))
-        {
+        if block.transactions.iter().any(|tx| {
+            tx.transaction_type != Some(2u64.into())
+                || (tx.access_list.is_some() && !tx.access_list.as_ref().unwrap().0.is_empty())
+        }) {
             return Err("unsupported block".into());
         }
 

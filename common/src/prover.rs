@@ -1,4 +1,7 @@
-use bus_mapping::circuit_input_builder::{ProtocolInstance, protocol_instance::{Transition, BlockMetadata}};
+use bus_mapping::circuit_input_builder::{
+    protocol_instance::{BlockMetadata, Transition},
+    ProtocolInstance,
+};
 use eth_types::{Address, Bytes, H256};
 use serde::{Deserialize, Serialize};
 
@@ -153,7 +156,9 @@ impl PartialEq for RequestExtraInstance {
 }
 
 fn parse_hash(input: &str) -> [u8; 32] {
-    H256::from_slice(&hex::decode(input).expect("parse_hash")).as_fixed_bytes().clone()
+    H256::from_slice(&hex::decode(input).expect("parse_hash"))
+        .as_fixed_bytes()
+        .clone()
 }
 
 fn parse_address(input: &str) -> Address {
@@ -165,8 +170,8 @@ impl From<RequestExtraInstance> for ProtocolInstance {
         ProtocolInstance {
             transition: Transition {
                 parentHash: parse_hash(&instance.parent_hash).into(),
-                blockHash: parse_hash(&instance.block_hash).into(),    // constrain: l2 block hash
-                signalRoot:  parse_hash(&instance.signal_root).into(), // constrain: ??l2 service account storage root??
+                blockHash: parse_hash(&instance.block_hash).into(), // constrain: l2 block hash
+                signalRoot: parse_hash(&instance.signal_root).into(), // constrain: ??l2 service account storage root??
                 graffiti: parse_hash(&instance.graffiti).into(),
             },
             block_metadata: BlockMetadata {
@@ -175,7 +180,9 @@ impl From<RequestExtraInstance> for ProtocolInstance {
                 blobHash: parse_hash(&instance.request_meta_data.blob_hash).into(),
                 extraData: parse_hash(&instance.request_meta_data.extra_data).into(),
                 depositsHash: parse_hash(&instance.request_meta_data.deposits_hash).into(),
-                coinbase: parse_address(&instance.request_meta_data.coinbase).to_fixed_bytes().into(),
+                coinbase: parse_address(&instance.request_meta_data.coinbase)
+                    .to_fixed_bytes()
+                    .into(),
                 id: instance.request_meta_data.id,
                 gasLimit: instance.request_meta_data.gas_limit,
                 timestamp: instance.request_meta_data.timestamp,
@@ -198,6 +205,8 @@ pub struct ProofRequestOptions {
     pub circuit: String,
     /// the block number
     pub block: u64,
+    /// prover mode
+    pub prover_mode: u64,
     /// the l2 rpc url
     pub rpc: String,
     /// the protocol instance data
@@ -207,6 +216,9 @@ pub struct ProofRequestOptions {
     /// Parameters file or directory to use.
     /// Otherwise generates them on the fly.
     pub param: Option<String>,
+    /// Witness file to serialize
+    /// Otherwise perform proof.
+    pub witness: Option<String>,
     /// Only use MockProver if true.
     #[serde(default = "default_bool")]
     pub mock: bool,

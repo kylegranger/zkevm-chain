@@ -7,6 +7,8 @@ use crate::Fr;
 use crate::G1Affine;
 use crate::ProverKey;
 use crate::ProverParams;
+use serde_json::json;
+use std::fs::write;
 
 #[cfg(feature = "evm-verifier")]
 mod evm_verifier_helper {
@@ -427,11 +429,30 @@ impl SharedState {
         let task_result: Result<Result<Proofs, String>, tokio::task::JoinError> = {
             let task_options_copy = task_options.clone();
             let self_copy = self.clone();
-
+            let prover_mode = task_options_copy.prover_mode;
             tokio::spawn(async move {
-                let witness = CircuitWitness::from_request(&task_options_copy)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                // let witness = CircuitWitness::from_request(&task_options_copy)
+                //     .await
+                //     .map_err(|e| e.to_string())?;
+
+                let witness = match prover_mode {
+                    1 | 3 => CircuitWitness::from_request(&task_options_copy)
+                        .await
+                        .map_err(|e| e.to_string())?,
+                    2 => {
+                        let jwitness =
+                            std::fs::read_to_string(task_options_copy.clone().witness.unwrap())
+                                .unwrap();
+                        serde_json::from_str(&jwitness).unwrap()
+                    }
+                    _ => panic!("no valid PROVERD_MODE"),
+                };
+
+                if prover_mode == 1 {
+                    let jwitness = json!(witness).to_string();
+                    write(task_options_copy.witness.clone().unwrap(), jwitness).unwrap();
+                    panic!("asdf: done!");
+                }
 
                 let (config, circuit_proof, aggregation_proof) = crate::match_circuit_params!(
                     witness.gas_used(),
@@ -866,7 +887,9 @@ mod test {
         let dummy_req = ProofRequestOptions {
             circuit: "super".to_string(),
             block: protocol_instance.request_meta_data.id,
+            prover_mode: 3,
             rpc: "https://rpc.internal.taiko.xyz/".to_string(),
+            witness: None,
             protocol_instance,
             param: Some("./params".to_string()),
             aggregate: false,
@@ -1055,9 +1078,11 @@ mod test {
         let dummy_req = ProofRequestOptions {
             circuit: "super".to_string(),
             block: protocol_instance.request_meta_data.id,
+            prover_mode: 3,
             rpc: "https://rpc.internal.taiko.xyz/".to_string(),
             protocol_instance,
             param: Some("./params".to_string()),
+            witness: None,
             aggregate: true,
             retry: true,
             mock: false,
