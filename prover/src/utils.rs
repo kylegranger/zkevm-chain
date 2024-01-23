@@ -83,7 +83,9 @@ pub fn gen_proof<
 
     let proof = transcript.finalize();
     if verify {
+        println!("V: 1");
         let mut transcript = TR::init(Cursor::new(proof.clone()));
+        println!("V: 2");
         let res = {
             let time_started = Instant::now();
             let v = verify_proof::<_, VerifierGWC<_>, _, TR, _>(
@@ -96,6 +98,7 @@ pub fn gen_proof<
             aux.verify = Instant::now().duration_since(time_started).as_millis() as u32;
             v
         };
+        println!("V: res {:?}", res);
 
         if let Err(verify_err) = res {
             if mock_feedback {

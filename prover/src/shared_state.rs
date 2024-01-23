@@ -432,6 +432,17 @@ impl SharedState {
             let self_copy = self.clone();
             let prover_mode = task_options_copy.prover_mode;
             tokio::spawn(async move {
+                if prover_mode == ProverMode::Verifier {
+                    let jproof =
+                        std::fs::read_to_string(task_options_copy.clone().proof_path.unwrap())
+                            .unwrap();
+                    let proof: Proofs = serde_json::from_str(&jproof).unwrap();
+
+                    // let jproof = json!(res).to_string();
+                    // write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
+                    println!("Read in proof: {:?}", proof);
+                    exit(1);
+                }
                 let witness = match prover_mode {
                     ProverMode::WitnessCapture | ProverMode::LegacyProver => {
                         CircuitWitness::from_request(&mut task_options_copy)
@@ -453,8 +464,6 @@ impl SharedState {
                     write(task_options_copy.witness_path.clone().unwrap(), jwitness).unwrap();
                     println!("done creating witness");
                     exit(1);
-                    // return;
-                    // panic!("asdf: done!");
                 }
 
                 let (config, circuit_proof, aggregation_proof) = crate::match_circuit_params!(
@@ -544,6 +553,13 @@ impl SharedState {
                     aggregation: aggregation_proof,
                     gas: witness.gas_used(),
                 };
+
+                if prover_mode == ProverMode::OfflineProver {
+                    let jproof = json!(res).to_string();
+                    write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
+                    println!("done creating witness");
+                    exit(1);
+                }
 
                 Ok(res)
             })
@@ -893,6 +909,7 @@ mod test {
             prover_mode: ProverMode::LegacyProver,
             rpc: "https://rpc.internal.taiko.xyz/".to_string(),
             witness_path: None,
+            proof_path: None,
             protocol_instance,
             param: Some("./params".to_string()),
             aggregate: false,
@@ -1086,6 +1103,7 @@ mod test {
             protocol_instance,
             param: Some("./params".to_string()),
             witness_path: None,
+            proof_path: None,
             aggregate: true,
             retry: true,
             mock: false,

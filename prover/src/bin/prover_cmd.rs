@@ -29,11 +29,10 @@ pub struct ArgConfiguration {
 #[tokio::main]
 async fn main() {
     let args: Vec<_> = std::env::args().collect();
-    println!("prover args: {:?}", args);
     let arg_conf = ArgConfiguration::parse_from(&args);
 
-    // set our arguments, use defaults as necessary
-    let block_num = arg_conf.block_num.unwrap_or(0);
+    // set our arguments, use defaults as applicable
+    let block_num = arg_conf.block_num;
     let params_path = arg_conf.kparams_path;
     let proof_path = arg_conf.proof_path;
     let prover_mode = arg_conf.mode;
@@ -50,27 +49,24 @@ async fn main() {
     // check args for each mode
     match prover_mode {
         ProverMode::WitnessCapture => {
-            assert!(block_num > 0, "must pass in a block number");
+            assert!(block_num.is_some(), "must pass in a block number");
             assert!(params_path.is_some(), "must pass in a kparams file");
             assert!(rpc_url.is_some(), "must pass in an L2 RPC url");
             assert!(
                 witness_path.is_some(),
-                "must pass in a witness file (e.g., .json) for output"
+                "must pass in a witness file for output"
             );
         }
         ProverMode::OfflineProver => {
             assert!(params_path.is_some(), "must pass in a kparams file");
-            assert!(
-                proof_path.is_some(),
-                "must pass in a proof file (e.g., .json) for output"
-            );
+            assert!(proof_path.is_some(), "must pass in a proof file for output");
             assert!(
                 witness_path.is_some(),
                 "must pass in a witness file for input"
             );
         }
         ProverMode::LegacyProver => {
-            assert!(block_num > 0, "must pass in a block_num");
+            assert!(block_num.is_some(), "must pass in a block_num");
             assert!(params_path.is_some(), "must pass in a kparams file");
             assert!(rpc_url.is_some(), "must pass in an L2 RPC url");
         }
@@ -79,8 +75,9 @@ async fn main() {
         }
     }
 
-    // now set dummy RPC url which will not be used.
+    // now set dummy RPC url and block number which will not be used.
     let rpc_url = rpc_url.unwrap_or("http://dummy.com".to_string());
+    let block_num = block_num.unwrap_or(0);
 
     // let block_num: u64 = var("PROVERD_BLOCK_NUM")
     //     .expect("PROVERD_BLOCK_NUM env var")
@@ -149,20 +146,19 @@ async fn main() {
         retry: false,
         param: params_path,
         witness_path,
+        proof_path,
         protocol_instance,
         mock: false,
         aggregate: false,
+        verify_proof: true,
         ..Default::default()
     };
 
-    println!("dump ProofRequestOptions: {:?} ", request);
     state.get_or_enqueue(&request).await;
     state.duty_cycle().await;
-    let result = state
-        .get_or_enqueue(&request)
-        .await
-        .expect("some")
-        .expect("result");
+    let _result = state.get_or_enqueue(&request).await;
+    //     .expect("some")
+    //     .expect("result");
 
-    serde_json::to_writer(std::io::stdout(), &result).expect("serialize and write");
+    // serde_json::to_writer(std::io::stdout(), &result).expect("serialize and write");
 }

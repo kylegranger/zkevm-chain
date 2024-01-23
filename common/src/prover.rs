@@ -167,43 +167,6 @@ fn parse_address(input: &str) -> Address {
 
 impl From<RequestExtraInstance> for ProtocolInstance {
     fn from(instance: RequestExtraInstance) -> Self {
-        println!("---- convert a");
-        let has = "10d1404faa8517c1bd5cc2931adff7a9a1d89468d9cce386bef6d9fc4ff45663".to_string();
-        println!("---- convert aa");
-        // let _parent_hash: [u8; 32] = parse_hash(&instance.parent_hash).into();
-        let _parent_hash: [u8; 32] = parse_hash(&has).into();
-        println!("---- convert aaa");
-
-        let _transition = Transition {
-            parentHash: parse_hash(&instance.parent_hash).into(),
-            blockHash: parse_hash(&instance.block_hash).into(), // constrain: l2 block hash
-            signalRoot: parse_hash(&instance.signal_root).into(), // constrain: ??l2 service account storage root??
-            graffiti: parse_hash(&instance.graffiti).into(),
-        };
-        println!("---- convert a");
-        let _block_metadata = BlockMetadata {
-            l1Hash: parse_hash(&instance.request_meta_data.l1_hash).into(),
-            difficulty: parse_hash(&instance.request_meta_data.difficulty).into(),
-            blobHash: parse_hash(&instance.request_meta_data.blob_hash).into(),
-            extraData: parse_hash(&instance.request_meta_data.extra_data).into(),
-            depositsHash: parse_hash(&instance.request_meta_data.deposits_hash).into(),
-            coinbase: parse_address(&instance.request_meta_data.coinbase)
-                .to_fixed_bytes()
-                .into(),
-            id: instance.request_meta_data.id,
-            gasLimit: instance.request_meta_data.gas_limit,
-            timestamp: instance.request_meta_data.timestamp,
-            l1Height: instance.request_meta_data.l1_height,
-            txListByteOffset: instance.request_meta_data.tx_list_byte_offset,
-            txListByteSize: instance.request_meta_data.tx_list_byte_size,
-            minTier: instance.request_meta_data.min_tier,
-            blobUsed: instance.request_meta_data.blob_used,
-            parentMetaHash: parse_hash(&instance.request_meta_data.parent_metahash).into(),
-        };
-        println!("---- convert c");
-        let _prover = parse_address(&instance.prover);
-        println!("---- convert d");
-
         ProtocolInstance {
             transition: Transition {
                 parentHash: parse_hash(&instance.parent_hash).into(),
@@ -274,8 +237,9 @@ pub struct ProofRequestOptions {
     /// Otherwise generates them on the fly.
     pub param: Option<String>,
     /// Witness file to serialize
-    /// Otherwise perform proof.
     pub witness_path: Option<String>,
+    /// Proof file to serialize
+    pub proof_path: Option<String>,
     /// Only use MockProver if true.
     #[serde(default = "default_bool")]
     pub mock: bool,
