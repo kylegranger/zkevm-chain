@@ -45,7 +45,8 @@ Required parameters:
 
 Required parameters:
 - `-k`: parameters file with k value of 22
-- `-w`: witness output file (json)
+- `-w`: witness input file
+- `-p`: proof output file
 
 ### Example
 
@@ -79,3 +80,7 @@ This mode performs a verification.  A proof is read in and verified, with the re
 ```
 ./prover_cmd legacy_prover -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547
 ```
+
+Required parameters:
+- `-p`: proof output file
+
