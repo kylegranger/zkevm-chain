@@ -435,6 +435,10 @@ impl SharedState {
                 //     .await
                 //     .map_err(|e| e.to_string())?;
 
+                // Mode 1: generate witness, write and exit
+                // Mode 2: read in witness, do proof
+                // Mode 3: generate witness, do proof (classic)
+
                 let witness = match prover_mode {
                     1 | 3 => CircuitWitness::from_request(&task_options_copy)
                         .await

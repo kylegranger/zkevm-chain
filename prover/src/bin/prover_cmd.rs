@@ -31,6 +31,45 @@ async fn main() {
     let witness: Option<String> = var("PROVERD_WITNESS_PATH").ok();
     println!("witness file: {:?}", witness);
 
+    let protocol_instance = RequestExtraInstance {
+        l1_signal_service: "7a2088a1bFc9d81c55368AE168C2C02570cB814F".to_string(),
+        l2_signal_service: "1000777700000000000000000000000000000007".to_string(),
+        l2_contract: "1000777700000000000000000000000000000001".to_string(),
+        request_meta_data: RequestMetaData {
+            id: 10,
+            timestamp: 1704868002,
+            l1_height: 75,
+            l1_hash: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
+            deposits_hash: "0000000000000000000000000000000000000000000000000000000000000001"
+                .to_string(),
+            blob_hash: "0000000000000000000000000000000000000000000000000000000000000001"
+                .to_string(),
+            tx_list_byte_offset: 0,
+            tx_list_byte_size: 0,
+            gas_limit: 820000000,
+            coinbase: "0000000000000000000000000000000000000000".to_string(),
+            difficulty: "0000000000000000000000000000000000000000000000000000000000000001"
+                .to_string(),
+            extra_data: "0000000000000000000000000000000000000000000000000000000000000002"
+                .to_string(),
+            parent_metahash: "0000000000000000000000000000000000000000000000000000000000000003"
+                .to_string(),
+            ..Default::default()
+        },
+        block_hash: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
+        parent_hash: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
+        signal_root: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
+        graffiti: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
+        prover: "ee85e2fe0e26891882a8CD744432d2BBFbe140dd".to_string(),
+        treasury: "df09A0afD09a63fb04ab3573922437e1e637dE8b".to_string(),
+        gas_used: 0,
+        parent_gas_used: 0,
+        block_max_gas_limit: 6000000,
+        max_transactions_per_block: 79,
+        max_bytes_per_tx_list: 120000,
+        anchor_gas_limit: 250000,
+    };
+
     let state = SharedState::new(String::new(), None);
     let request = ProofRequestOptions {
         circuit: "super".to_string(),
@@ -40,11 +79,13 @@ async fn main() {
         retry: false,
         param: Some(params_path),
         witness,
+        protocol_instance,
         mock: false,
         aggregate: false,
         ..Default::default()
     };
 
+    println!("dump ProofRequestOptions: {:?} ", request);
     state.get_or_enqueue(&request).await;
     state.duty_cycle().await;
     let result = state

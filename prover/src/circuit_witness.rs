@@ -154,11 +154,15 @@ impl CircuitWitness {
         rpc_url: &str,
         pi: &RequestExtraInstance,
     ) -> Result<Self, Box<dyn std::error::Error>> {
+        println!("*** from_rpc 1");
         let url = Http::from_str(rpc_url)?;
+        println!("*** from_rpc 2");
         let geth_client = GethClient::new(url);
         // TODO: add support for `eth_getHeaderByNumber`
+        println!("*** from_rpc 3");
         let block = geth_client.get_block_by_number((*block_num).into()).await?;
 
+        println!("*** from_rpc 4");
         #[cfg(feature = "eip-1559-only")]
         Self::validate_proverable_block(&block)?;
 
@@ -180,9 +184,15 @@ impl CircuitWitness {
             max_evm_rows: circuit_config.pad_to,
             max_keccak_rows: circuit_config.keccak_padding,
         };
+        println!("*** from_rpc 5: CircuitsParams {:?}", circuit_config);
+        println!("*** pi {:?}", pi);
+
         let pi: ProtocolInstance = pi.clone().into();
+        println!("*** from_rpc 5a");
         let builder = BuilderClient::new(geth_client, circuit_params, Some(pi.clone())).await?;
+        println!("*** from_rpc 6");
         let (builder, eth_block) = builder.gen_inputs(*block_num).await?;
+        println!("*** from_rpc 7");
 
         Ok(Self {
             circuit_config,
