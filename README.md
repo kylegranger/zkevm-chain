@@ -19,12 +19,11 @@ Options:
   -V, --version                      Print version
   ```
 
-### Example
-
-```
-
-
 There are for modes (or actions)
+- witness capture
+- offline prover
+- legacy prover
+- verifier
 
 ## `witness_capture`
 
@@ -45,7 +44,6 @@ Required parameters:
 ## `offline_prover`
 
 Required parameters:
-- `-b`: a block number
 - `-k`: parameters file with k value of 22
 - `-w`: witness output file (json)
 
