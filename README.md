@@ -19,7 +19,7 @@ Options:
   -V, --version                      Print version
   ```
 
-There are for modes (or actions)
+There are four prover modes:
 - witness capture
 - offline prover
 - legacy prover
@@ -30,14 +30,14 @@ There are for modes (or actions)
 Required parameters:
 - `-b`: a block number
 - `-k`: parameters file with k value of 22
-- `-w`: witness output file (json)
 - `-r`: an RPC url for the L2 Katla node
+- `-w`: witness output file (json)
 
 
 ### Example
 
 ```
-./prover_cmd witness_capture -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -w wit2-17664.json
+./prover_cmd witness_capture -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -w witness-17664.json
 ```
 
 
@@ -45,19 +45,21 @@ Required parameters:
 
 Required parameters:
 - `-k`: parameters file with k value of 22
-- `-w`: witness input file
 - `-p`: proof output file
+- `-w`: witness input file
 
 ### Example
 
 ```
-./prover_cmd offline_prover -k kzg_bn254_22.srs -w wit2-17664.json  -p output.json
+./prover_cmd offline_prover -k kzg_bn254_22.srs -p output.json -w wit2-17664.json
 ```
 
 
 ## `legacy_prover`
 
-This is the original mode of operation for prover_cmd.
+This is the original mode of operation for `prover_cmd`.  
+
+A witness is created with a connection to an L2 node, followed by the generation of the proof.  No artifacts are saved; the output is written to stdout.
 
 Required parameters:
 - `-b`: a block number
@@ -72,7 +74,7 @@ Required parameters:
 
 ## `verifier`
 
-This mode performs a verification.  A proof is read in and verified, with the results written to stdout.
+This mode performs a verification: a proof is read in and verified, with the results written to stdout.
 
 
 ### Example
