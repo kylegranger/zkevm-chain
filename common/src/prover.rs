@@ -235,6 +235,26 @@ impl From<RequestExtraInstance> for ProtocolInstance {
     }
 }
 
+#[derive(PartialEq, Clone, Debug, Copy, Serialize, Deserialize, Default)]
+pub enum ProverMode {
+    WitnessCapture,
+    OfflineProver,
+    #[default]
+    LegacyProver,
+    Verifier,
+}
+impl From<&str> for ProverMode {
+    fn from(input: &str) -> ProverMode {
+        match input {
+            "witness_capture" => ProverMode::WitnessCapture,
+            "offline_prover" => ProverMode::OfflineProver,
+            "legacy_prover" => ProverMode::LegacyProver,
+            "verifier" => ProverMode::Verifier,
+            _ => panic!("invalid mode string: {input}"),
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ProofRequestOptions {
     /// The name of the circuit.
@@ -243,7 +263,7 @@ pub struct ProofRequestOptions {
     /// the block number
     pub block: u64,
     /// prover mode
-    pub prover_mode: u64,
+    pub prover_mode: ProverMode,
     /// the l2 rpc url
     pub rpc: String,
     /// the protocol instance data
@@ -255,7 +275,7 @@ pub struct ProofRequestOptions {
     pub param: Option<String>,
     /// Witness file to serialize
     /// Otherwise perform proof.
-    pub witness: Option<String>,
+    pub witness_path: Option<String>,
     /// Only use MockProver if true.
     #[serde(default = "default_bool")]
     pub mock: bool,

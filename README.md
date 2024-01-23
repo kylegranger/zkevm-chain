@@ -1,38 +1,83 @@
-[![Coverage Status](https://coveralls.io/repos/github/privacy-scaling-explorations/zkevm-chain/badge.svg?branch=master)](https://coveralls.io/github/privacy-scaling-explorations/zkevm-chain?branch=master)
 
-###### Prover Integration Test Status
-[![Pi Circuit aggregation eth_transfer](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/pi-eth-transfer.yml/badge.svg)](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/pi-eth-transfer.yml)
-[![Pi Circuit aggregation native_withdraw](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/pi-native-withdraw.yml/badge.svg)](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/pi-native-withdraw.yml)
-[![Super Circuit aggregation eth_transfer](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-eth-transfer.yml/badge.svg)](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-eth-transfer.yml)
-[![Super Circuit aggregation native_withdraw](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-native-withdraw.yml/badge.svg)](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-native-withdraw.yml)
-[![Super Circuit aggregation worst_case_mload](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-worst-case-mload.yml/badge.svg)](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-worst-case-mload.yml)
-[![Super Circuit aggregation worst_case_smod](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-worst-case-smod.yml/badge.svg)](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-worst-case-smod.yml)
-[![Super Circuit aggregation worst_case_keccak_0_32](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-worst-case-keccak-0-32.yml/badge.svg)](https://github.com/privacy-scaling-explorations/zkevm-chain/actions/workflows/super-worst-case-keccak-0-32.yml)
+# `prover_cmd`
 
-## Structure
+## Usage
 
-|Path|Description|
-|-|-|
-|`coordinator/`|coordinator daemon|
-|`contracts/`|l1/l2 bridge contracts|
-|`docker/`|dockerfiles for various purposes|
-|`scripts/`|helpful scripts|
-
-## Setup
-`cp .env.example .env` and edit the values. The account you specify in that file will be the miner of the clique network and will have ETH allocated in the genesis block.
-
-If you make changes to the genesis file, then you have to delete the existing chain via `docker compose down --volumes` - this will delete any volumes associated with this setup.
-Use `DOCKER_BUILDKIT=1 docker compose up` to start the chain.
-
-You can use `./scripts/dev.sh` to start a local dev environment without the coordinator-service that drops you into a shell. Useful if you want to work on the `coordinator/` daemon.
-
-## Developer workflows
-###### Testing the coordinator & prover with `cargo test`
-Enter the developer service via `./scripts/dev.sh`.
-Inside that shell you can use this wrapper script to build & start the `prover_rpcd` in the background and invoke `cargo test -- eth_transfer`:
 ```
-./scripts/test_prover.sh eth_transfer
-```
-The output of the prover damon will be piped to `PROVER_LOG.txt`.
-If you need fixtures for the L2 block with number 1, then use `./scripts/get_block_fixtures.sh $COORDINATOR_L2_RPC_URL 1` to retrieve it for you.
+Usage: prover_cmd [OPTIONS] <MODE>
 
+Arguments:
+  <MODE>  witness_capture | offline_prover | legacy_prover | verifier
+
+Options:
+  -b, --block-num <BLOCK_NUM>        Required for witness_capture and legacy_prover
+  -r, --rpc-url <RPC_URL>            Url of L2 Taiko node, required for witness_capture and legacy_prover
+  -p, --proof-path <PROOF_PATH>      Required for offline_prover and verifier
+  -w, --witness-path <WITNESS_PATH>  Required for witness_capture and offline_prover
+  -k, --kparams-path <KPARAMS_PATH>  Required for witness_capture, offline_prover, legacy_prover
+  -h, --help                         Print help
+  -V, --version                      Print version
+  ```
+
+### Example
+
+```
+
+
+There are for modes (or actions)
+
+## `witness_capture`
+
+Required parameters:
+- `-b`: a block number
+- `-k`: parameters file with k value of 22
+- `-w`: witness output file (json)
+- `-r`: an RPC url for the L2 Katla node
+
+
+### Example
+
+```
+./prover_cmd witness_capture -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -w wit2-17664.json
+```
+
+
+## `offline_prover`
+
+Required parameters:
+- `-b`: a block number
+- `-k`: parameters file with k value of 22
+- `-w`: witness output file (json)
+
+### Example
+
+```
+./prover_cmd offline_prover -k kzg_bn254_22.srs -w wit2-17664.json  -p output.json
+```
+
+
+## `legacy_prover`
+
+This is the original mode of operation for prover_cmd.
+
+Required parameters:
+- `-b`: a block number
+- `-k`: parameters file with k value of 22
+- `-r`: an RPC url for the L2 Katla node
+
+### Example
+
+```
+./prover_cmd legacy_prover -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547
+```
+
+## `verifier`
+
+This mode performs a verification.  A proof is read in and verified, with the results written to stdout.
+
+
+### Example
+
+```
+./prover_cmd legacy_prover -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547
+```

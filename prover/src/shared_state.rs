@@ -9,6 +9,7 @@ use crate::ProverKey;
 use crate::ProverParams;
 use serde_json::json;
 use std::fs::write;
+use std::process::exit;
 
 #[cfg(feature = "evm-verifier")]
 mod evm_verifier_helper {
@@ -326,7 +327,7 @@ impl SharedState {
         let task = rw.tasks.iter_mut().find(|e| e.options == *options);
 
         if task.is_some() {
-            let mut task = task.unwrap();
+            let task = task.unwrap();
 
             if task.result.is_some() {
                 if options.retry && task.result.as_ref().unwrap().is_err() {
@@ -427,35 +428,33 @@ impl SharedState {
 
         // spawn a task to catch panics
         let task_result: Result<Result<Proofs, String>, tokio::task::JoinError> = {
-            let task_options_copy = task_options.clone();
+            let mut task_options_copy = task_options.clone();
             let self_copy = self.clone();
             let prover_mode = task_options_copy.prover_mode;
             tokio::spawn(async move {
-                // let witness = CircuitWitness::from_request(&task_options_copy)
-                //     .await
-                //     .map_err(|e| e.to_string())?;
-
-                // Mode 1: generate witness, write and exit
-                // Mode 2: read in witness, do proof
-                // Mode 3: generate witness, do proof (classic)
-
                 let witness = match prover_mode {
-                    1 | 3 => CircuitWitness::from_request(&task_options_copy)
-                        .await
-                        .map_err(|e| e.to_string())?,
-                    2 => {
-                        let jwitness =
-                            std::fs::read_to_string(task_options_copy.clone().witness.unwrap())
-                                .unwrap();
+                    ProverMode::WitnessCapture | ProverMode::LegacyProver => {
+                        CircuitWitness::from_request(&mut task_options_copy)
+                            .await
+                            .map_err(|e| e.to_string())?
+                    }
+                    ProverMode::OfflineProver => {
+                        let jwitness = std::fs::read_to_string(
+                            task_options_copy.clone().witness_path.unwrap(),
+                        )
+                        .unwrap();
                         serde_json::from_str(&jwitness).unwrap()
                     }
                     _ => panic!("no valid PROVERD_MODE"),
                 };
 
-                if prover_mode == 1 {
+                if prover_mode == ProverMode::WitnessCapture {
                     let jwitness = json!(witness).to_string();
-                    write(task_options_copy.witness.clone().unwrap(), jwitness).unwrap();
-                    panic!("asdf: done!");
+                    write(task_options_copy.witness_path.clone().unwrap(), jwitness).unwrap();
+                    println!("done creating witness");
+                    exit(1);
+                    // return;
+                    // panic!("asdf: done!");
                 }
 
                 let (config, circuit_proof, aggregation_proof) = crate::match_circuit_params!(
@@ -891,9 +890,9 @@ mod test {
         let dummy_req = ProofRequestOptions {
             circuit: "super".to_string(),
             block: protocol_instance.request_meta_data.id,
-            prover_mode: 3,
+            prover_mode: ProverMode::LegacyProver,
             rpc: "https://rpc.internal.taiko.xyz/".to_string(),
-            witness: None,
+            witness_path: None,
             protocol_instance,
             param: Some("./params".to_string()),
             aggregate: false,
@@ -1082,11 +1081,11 @@ mod test {
         let dummy_req = ProofRequestOptions {
             circuit: "super".to_string(),
             block: protocol_instance.request_meta_data.id,
-            prover_mode: 3,
+            prover_mode: ProverMode::LegacyProver,
             rpc: "https://rpc.internal.taiko.xyz/".to_string(),
             protocol_instance,
             param: Some("./params".to_string()),
-            witness: None,
+            witness_path: None,
             aggregate: true,
             retry: true,
             mock: false,

@@ -139,10 +139,10 @@ impl CircuitWitness {
     }
 
     pub async fn from_request(
-        request: &ProofRequestOptions,
+        request: &mut ProofRequestOptions,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let mut w =
-            Self::from_rpc(&request.block, &request.rpc, &request.protocol_instance).await?;
+            Self::from_rpc(&request.block, &request.rpc, &mut request.protocol_instance).await?;
         w.protocol_instance = request.protocol_instance.clone().into();
         Ok(w)
     }
@@ -152,7 +152,7 @@ impl CircuitWitness {
     pub async fn from_rpc(
         block_num: &u64,
         rpc_url: &str,
-        pi: &RequestExtraInstance,
+        pi: &mut RequestExtraInstance,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         println!("*** from_rpc 1");
         let url = Http::from_str(rpc_url)?;
@@ -161,6 +161,17 @@ impl CircuitWitness {
         // TODO: add support for `eth_getHeaderByNumber`
         println!("*** from_rpc 3");
         let block = geth_client.get_block_by_number((*block_num).into()).await?;
+
+        println!("*** pi.block_hash before: {:?}", pi.block_hash);
+        println!("*** pi.parent_hash before: {:?}", pi.parent_hash);
+        let hash = format!("{:?}", block.hash.unwrap()).as_str()[2..].to_string();
+        let parent_hash = format!("{:?}", block.parent_hash).as_str()[2..].to_string();
+
+        pi.block_hash = hash;
+        pi.parent_hash = parent_hash;
+
+        println!("*** pi.block_hash after: {:?}", pi.block_hash);
+        println!("*** pi.parent_hash after: {:?}", pi.parent_hash);
 
         println!("*** from_rpc 4");
         #[cfg(feature = "eip-1559-only")]
