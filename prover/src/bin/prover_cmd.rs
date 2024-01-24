@@ -79,25 +79,9 @@ async fn main() {
     let rpc_url = rpc_url.unwrap_or("http://dummy.com".to_string());
     let block_num = block_num.unwrap_or(0);
 
-    // let block_num: u64 = var("PROVERD_BLOCK_NUM")
-    //     .expect("PROVERD_BLOCK_NUM env var")
-    //     .parse()
-    //     .expect("Cannot parse PROVERD_BLOCK_NUM env var");
-    // let rpc_url: String = var("PROVERD_RPC_URL")
-    //     .expect("PROVERD_RPC_URL env var")
-    //     .parse()
-    //     .expect("Cannot parse PROVERD_RPC_URL env var");
-    // let params_path: String = var("PROVERD_PARAMS_PATH")
-    //     .expect("PROVERD_PARAMS_PATH env var")
-    //     .parse()
-    //     .expect("Cannot parse PROVERD_PARAMS_PATH env var");
-    // let prover_mode: u64 = var("PROVERD_MODE")
-    //     .expect("PROVERD_MODE env var")
-    //     .parse()
-    //     .expect("Cannot parse PROVERD_BLOCK_NUM env var");
-    // let witness: Option<String> = var("PROVERD_WITNESS_PATH").ok();
-    // println!("witness file: {:?}", witness);
-
+    // mock a RequestExtraInstance struct
+    // the block_hash and parent_hash will get overwritten with real values
+    // when the eth_block is first read in.
     let protocol_instance = RequestExtraInstance {
         l1_signal_service: "7a2088a1bFc9d81c55368AE168C2C02570cB814F".to_string(),
         l2_signal_service: "1000777700000000000000000000000000000007".to_string(),

@@ -29,7 +29,7 @@ There are four prover modes:
 
 Required parameters:
 - `-b`: a block number
-- `-k`: parameters file with k value of 22
+- `-k`: parameters file with k value of 22. This should be kzg_bn254_22.srs.
 - `-r`: an RPC url for the L2 Katla node
 - `-w`: witness output file (json)
 
@@ -44,14 +44,14 @@ Required parameters:
 ## `offline_prover`
 
 Required parameters:
-- `-k`: parameters file with k value of 22
+- `-k`: parameters file with k value of 22. This should be kzg_bn254_22.srs.
 - `-p`: proof output file
 - `-w`: witness input file
 
 ### Example
 
 ```
-./prover_cmd offline_prover -k kzg_bn254_22.srs -p output.json -w wit2-17664.json
+./prover_cmd offline_prover -k kzg_bn254_22.srs -p proof-17664.json -w witness-17664.json
 ```
 
 
@@ -63,7 +63,7 @@ A witness is created with a connection to an L2 node, followed by the generation
 
 Required parameters:
 - `-b`: a block number
-- `-k`: parameters file with k value of 22
+- `-k`: parameters file with k value of 22.  This should be kzg_bn254_22.srs.
 - `-r`: an RPC url for the L2 Katla node
 
 ### Example
@@ -76,11 +76,13 @@ Required parameters:
 
 This mode performs a verification: a proof is read in and verified, with the results written to stdout.
 
+**TBD**
+
 
 ### Example
 
 ```
-./prover_cmd legacy_prover -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547
+./prover_cmd verfier -p proof-17664.json
 ```
 
 Required parameters:

@@ -7,6 +7,18 @@ use crate::Fr;
 use crate::G1Affine;
 use crate::ProverKey;
 use crate::ProverParams;
+// use halo2_proofs::dev::MockProver;
+// use halo2_proofs::halo2curves::ff::PrimeField;
+// use halo2_proofs::plonk::verify_proof;
+// use halo2_proofs::plonk::Circuit;
+// use halo2_proofs::poly::commitment::Params;
+// use halo2_proofs::poly::commitment::ParamsProver;
+// use halo2_proofs::poly::kzg::multiopen::ProverGWC;
+// use halo2_proofs::poly::kzg::multiopen::VerifierGWC;
+// use halo2_proofs::poly::kzg::strategy::SingleStrategy;
+// use halo2_proofs::transcript::EncodedChallenge;
+// use halo2_proofs::transcript::TranscriptReadBuffer;
+// use halo2_proofs::transcript::TranscriptWriterBuffer;
 use serde_json::json;
 use std::fs::write;
 use std::process::exit;
@@ -432,19 +444,33 @@ impl SharedState {
             let self_copy = self.clone();
             let prover_mode = task_options_copy.prover_mode;
             tokio::spawn(async move {
-                if prover_mode == ProverMode::Verifier {
-                    let jproof =
-                        std::fs::read_to_string(task_options_copy.clone().proof_path.unwrap())
-                            .unwrap();
-                    let proof: Proofs = serde_json::from_str(&jproof).unwrap();
+                // if prover_mode == ProverMode::Verifier {
+                //     let jproof =
+                //         std::fs::read_to_string(task_options_copy.clone().proof_path.unwrap())
+                //             .unwrap();
+                //     let proof: Proofs = serde_json::from_str(&jproof).unwrap();
 
-                    // let jproof = json!(res).to_string();
-                    // write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
-                    println!("Read in proof: {:?}", proof);
-                    exit(1);
-                }
+                //     // xxx
+                //     let res = {
+                //         let time_started = Instant::now();
+                //         let v = verify_proof::<_, VerifierGWC<_>, _, TR, _>(
+                //             params.verifier_params(),
+                //             pk.get_vk(),
+                //             SingleStrategy::new(params.verifier_params()),
+                //             &[inputs.as_slice()],
+                //             &mut transcript,
+                //         );
+                //         aux.verify = Instant::now().duration_since(time_started).as_millis() as u32;
+                //         v
+                //     };
+                //     println!("XXX: res {:?}", res);
+
+                //     println!("Read in proof: {:?}", proof);
+                //     exit(1);
+                // }
                 let witness = match prover_mode {
                     ProverMode::WitnessCapture | ProverMode::LegacyProver => {
+                        println!("call from_request");
                         CircuitWitness::from_request(&mut task_options_copy)
                             .await
                             .map_err(|e| e.to_string())?
@@ -557,7 +583,7 @@ impl SharedState {
                 if prover_mode == ProverMode::OfflineProver {
                     let jproof = json!(res).to_string();
                     write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
-                    println!("done creating witness");
+                    println!("done creating proof: write and exit");
                     exit(1);
                 }
 
