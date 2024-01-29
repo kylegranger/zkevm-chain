@@ -7,6 +7,12 @@ use crate::Fr;
 use crate::G1Affine;
 use crate::ProverKey;
 use crate::ProverParams;
+use ethers_core::abi::Abi;
+use ethers_core::abi::AbiParser;
+// use ethers_core::abi::RawLog;
+// use ethers_core::abi::Token;
+use ethers_core::abi::Tokenizable;
+
 // use halo2_proofs::dev::MockProver;
 // use halo2_proofs::halo2curves::ff::PrimeField;
 // use halo2_proofs::plonk::verify_proof;
@@ -19,6 +25,7 @@ use crate::ProverParams;
 // use halo2_proofs::transcript::EncodedChallenge;
 // use halo2_proofs::transcript::TranscriptReadBuffer;
 // use halo2_proofs::transcript::TranscriptWriterBuffer;
+use ethers_core::types::{Bytes, U256};
 use serde_json::json;
 use std::fs::write;
 use std::process::exit;
@@ -56,6 +63,35 @@ use zkevm_circuits::root_circuit::TaikoAggregationCircuit;
 use zkevm_circuits::util::SubCircuit;
 use zkevm_common::json_rpc::jsonrpc_request_client;
 use zkevm_common::prover::*;
+
+// fn get_abi() -> Abi {
+//     AbiParser::default()
+//         .parse(&[
+//                "function testPublicInputCommitment(uint256 MAX_TXS, uint256 MAX_CALLDATA, uint256 chainId, uint256 parentStateRoot, bytes calldata witness) returns (uint256[])",
+//         ])
+//         .expect("parse abi")
+// }
+
+fn get_abi() -> Abi {
+    AbiParser::default()
+        .parse(&[
+            "event BlockSubmitted()",
+            "event BlockFinalized(bytes32 blockHash)",
+            "event MessageDispatched(address from, address to, uint256 value, uint256 fee, uint256 deadline, uint256 nonce, bytes data)",
+            "event MessageDelivered(bytes32 id)",
+            "function submitBlock(bytes)",
+            "function finalizeBlock(bytes proof)",
+            "function deliverMessageWithProof(address from, address to, uint256 value, uint256 fee, uint256 deadline, uint256 nonce, bytes data, bytes proof)",
+            "function stateRoots(bytes32 blockHash) returns (bytes32)",
+            "function importForeignBlock(uint256 blockNumber, bytes32 blockHash)",
+            "function initGenesis(bytes32 blockHash, bytes32 stateRoot)",
+            "function buildCommitment(bytes) returns (uint256[])",
+            "function importForeignBridgeState(bytes, bytes)",
+            "function multicall()",
+            "function getTimestampForStorageRoot(bytes32 storageRoot) returns (uint256)",
+        ])
+        .expect("parse abi")
+}
 
 fn get_param_path(path: &String, k: usize) -> PathBuf {
     // try to automatically choose a file if the path is a folder.
@@ -580,12 +616,94 @@ impl SharedState {
                     gas: witness.gas_used(),
                 };
 
-                if prover_mode == ProverMode::OfflineProver {
-                    let jproof = json!(res).to_string();
-                    write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
-                    println!("done creating proof: write and exit");
-                    exit(1);
-                }
+                let proof = res.clone();
+                // choose the aggregation proof if not empty
+                let (is_aggregated, proof_result) = {
+                    if proof.aggregation.proof.len() != 0 {
+                        (true, proof.aggregation)
+                    } else {
+                        (false, proof.circuit)
+                    }
+                };
+
+                // START
+                // println!("next 1");
+
+                // let mut verifier_calldata = vec![];
+                // let mut tmp_buf = vec![0u8; 32];
+                // let block = witness.eth_block;
+                // println!("next 2");
+
+                // // proof_result.instance.iter().for_each(|vstr| {
+                // //     println!("next 3");
+                // //     println!("vstr {:?}", vstr);
+                // //     let temp = vstr.as_str()[2..].to_string();
+                // //     println!("temp {:?}", temp);
+
+                // //     let v = U256::from(temp.as_bytes());
+                // //     println!("v {:?}", v);
+                // //     println!("tmp_buf len {:?}", tmp_buf.len());
+                // //     // let v = U256::from_str(vstr);
+                // //     v.to_big_endian(&mut tmp_buf);
+                // //     verifier_calldata.extend_from_slice(&tmp_buf);
+                // // });
+                // println!("next 4");
+                // verifier_calldata.extend_from_slice(proof_result.proof.as_ref());
+                // println!("next 5");
+
+                // let mut proof_data = vec![];
+                // proof_data.extend_from_slice(block.hash.unwrap().as_ref());
+                // println!("next 6");
+
+                // // this is temporary until proper contract setup
+                // let verifier_addr = U256::from(proof_result.label.as_bytes());
+                // println!("next 7");
+
+                // verifier_addr.to_big_endian(&mut tmp_buf);
+                // println!("next 8");
+                // proof_data.extend_from_slice(&tmp_buf);
+                // println!("next 9");
+
+                // let is_aggregated = match is_aggregated {
+                //     true => U256::one(),
+                //     false => U256::zero(),
+                // };
+                // println!("next 10");
+                // is_aggregated.to_big_endian(&mut tmp_buf);
+                // proof_data.extend_from_slice(&tmp_buf);
+                // println!("next 11");
+
+                // proof_data.extend_from_slice(&verifier_calldata);
+                // println!("next 12");
+
+                // let abi = get_abi();
+                // println!("next 13");
+
+                // let proof_data = Bytes::from(proof_data);
+                // println!("next 14");
+                // // println!("proof_data: {:x?}", proof_data);
+                // let calldata = abi
+                //     .function("finalizeBlock")
+                //     .unwrap()
+                //     .encode_input(&[proof_data.into_token()])
+                //     .expect("calldata");
+
+                // println!("next 15");
+                // // println!("calldata: {:x?}", calldata);
+                // // let l1_bridge_addr = Some(self.config.lock().await.l1_bridge);
+                // // self.transaction_to_l1(l1_bridge_addr, U256::zero(), calldata)
+                // //     .await
+                // //     .expect("receipt");
+
+                // if prover_mode == ProverMode::OfflineProver {
+                //     let jproof = json!(res).to_string();
+                //     let jcalldata = json!(calldata).to_string();
+                //     write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
+                //     write("calldata.json", jcalldata).unwrap();
+                //     println!("done creating proof: write and exit");
+                //     exit(1);
+                // }
+                // END
 
                 Ok(res)
             })

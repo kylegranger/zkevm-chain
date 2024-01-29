@@ -87,32 +87,32 @@ async fn main() {
         l2_signal_service: "1000777700000000000000000000000000000007".to_string(),
         l2_contract: "1000777700000000000000000000000000000001".to_string(),
         request_meta_data: RequestMetaData {
-            id: 10,
-            timestamp: 1704868002,
-            l1_height: 75,
-            l1_hash: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
-            deposits_hash: "0000000000000000000000000000000000000000000000000000000000000001"
+            id: 57437,
+            timestamp: 1706084004,
+            l1_height: 800044,
+            l1_hash: "db92d81a16dcd5b684bdf420ef71e3e31b40cda81a43563f9638c9c0390790e4".to_string(),
+            deposits_hash: "569e75fc77c1a856f6daaf9e69d8a9566ca34aa47f9133711ce065a571af0cfd"
                 .to_string(),
-            blob_hash: "0000000000000000000000000000000000000000000000000000000000000001"
+            blob_hash: "94e0d3a174ecf52f531eba85ee1a01f77fccae3f352b4be7ed68bb2cac4969ee"
                 .to_string(),
             tx_list_byte_offset: 0,
-            tx_list_byte_size: 0,
-            gas_limit: 820000000,
-            coinbase: "0000000000000000000000000000000000000000".to_string(),
-            difficulty: "0000000000000000000000000000000000000000000000000000000000000001"
+            tx_list_byte_size: 28706,
+            gas_limit: 15000000,
+            coinbase: "e1e210594771824dad216568b91c9cb4ceed361c".to_string(),
+            difficulty: "055c829a0e081185e57b66ff8fbb0fbf06f5fc58e226764419224495d3036a00"
                 .to_string(),
-            extra_data: "0000000000000000000000000000000000000000000000000000000000000002"
+            extra_data: "302e31382e302d64657600000000000000000000000000000000000000000000"
                 .to_string(),
-            parent_metahash: "0000000000000000000000000000000000000000000000000000000000000003"
+            parent_metahash: "e5c39fecba3dca4aec370e5005fbecac568705f859871794e4f4090c276936fa"
                 .to_string(),
             ..Default::default()
         },
-        block_hash: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
-        parent_hash: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
-        signal_root: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
-        graffiti: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
+        block_hash: "930e1b7bc4c8354614b0c76aea5c5dc6b6797d6e21ccda43e228cd0cef773490".to_string(),
+        parent_hash: "d6cf6f0c98d11e9e955d97ebd477282831d2f11f55ee13354f2134afc7f85429".to_string(),
+        signal_root: "5c9572d9ec31784e01a393dc17b7ff0786b6534bcfa14715effd02d29222dbf9".to_string(),
+        graffiti: "0000000000000000000000000000000000000000000000000000000000000000".to_string(),
         prover: "ee85e2fe0e26891882a8CD744432d2BBFbe140dd".to_string(),
-        treasury: "df09A0afD09a63fb04ab3573922437e1e637dE8b".to_string(),
+        treasury: "0x1670010000000000000000000000000000010001".to_string(),
         gas_used: 0,
         parent_gas_used: 0,
         block_max_gas_limit: 6000000,
