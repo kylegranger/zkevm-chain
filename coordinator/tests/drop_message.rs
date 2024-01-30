@@ -72,6 +72,7 @@ async fn drop_message_l1(
     msg: &MessageBeacon,
     proof_bytes: Option<Bytes>,
 ) -> Result<TransactionReceipt, String> {
+    println!("drop_message_l1---------------------");
     let l1_bridge_addr = shared_state.config.lock().await.l1_bridge;
     let l2_bridge_addr = shared_state.ro.l2_message_dispatcher_addr;
     let abi = zkevm_abi();
@@ -157,6 +158,7 @@ async fn drop_message_l2(
     msg: &MessageBeacon,
     proof_bytes: Option<Bytes>,
 ) -> Result<H256, String> {
+    println!("drop_message_l2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     let l1_bridge_addr = shared_state.config.lock().await.l1_bridge;
     let l2_bridge_addr = shared_state.ro.l2_message_dispatcher_addr;
     let abi = zkevm_abi();

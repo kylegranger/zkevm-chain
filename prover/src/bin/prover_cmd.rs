@@ -69,6 +69,7 @@ async fn main() {
             assert!(block_num.is_some(), "must pass in a block_num");
             assert!(params_path.is_some(), "must pass in a kparams file");
             assert!(rpc_url.is_some(), "must pass in an L2 RPC url");
+            assert!(proof_path.is_some(), "must pass in a proof file for output");
         }
         ProverMode::Verifier => {
             assert!(proof_path.is_some(), "must pass in a proof file for input");
@@ -112,7 +113,7 @@ async fn main() {
         signal_root: "5c9572d9ec31784e01a393dc17b7ff0786b6534bcfa14715effd02d29222dbf9".to_string(),
         graffiti: "0000000000000000000000000000000000000000000000000000000000000000".to_string(),
         prover: "ee85e2fe0e26891882a8CD744432d2BBFbe140dd".to_string(),
-        treasury: "0x1670010000000000000000000000000000010001".to_string(),
+        treasury: "0x1670080000000000000000000000000000010001".to_string(),
         gas_used: 0,
         parent_gas_used: 0,
         block_max_gas_limit: 6000000,
@@ -133,7 +134,7 @@ async fn main() {
         proof_path,
         protocol_instance,
         mock: false,
-        aggregate: false,
+        aggregate: true,
         verify_proof: true,
         ..Default::default()
     };

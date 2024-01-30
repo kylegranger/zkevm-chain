@@ -7,6 +7,7 @@ use crate::Fr;
 use crate::G1Affine;
 use crate::ProverKey;
 use crate::ProverParams;
+use eth_types::ToBigEndian;
 use ethers_core::abi::Abi;
 use ethers_core::abi::AbiParser;
 // use ethers_core::abi::RawLog;
@@ -29,6 +30,7 @@ use ethers_core::types::{Bytes, U256};
 use serde_json::json;
 use std::fs::write;
 use std::process::exit;
+use std::str::FromStr;
 
 #[cfg(feature = "evm-verifier")]
 mod evm_verifier_helper {
@@ -234,8 +236,65 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                     .await
                     .map_err(|e| e.to_string())?
             };
+
             let agg_instance = agg_circuit.instance();
-            aggregation_proof.instance = collect_instance_hex(&agg_instance);
+            // println!(
+            //     "agg_instance.num_instance a {:?}",
+            //     agg_instance.num_instance()
+            // );
+            // println!("agg_instance aa {:?}", agg_instance);
+
+            // aggregation_proof.instance = collect_instance_hex(&agg_instance);
+            // aggregation_proof.instance = vec![
+            //     "000000000000000000000000000000001727e2bd79aa6df9d4329f0cd874c3d8".to_string(),
+            //     "00000000000000000000000000000000092e233038dceeccab2420055bc5752c".to_string(),
+            //     "00000000000000000000000000000000000000000000000f08f24b0443264549".to_string(),
+            //     "00000000000000000000000000000000000000000000000f0e49c5f0677ad9cc".to_string(),
+            //     "0000000000000000000000000000000000000000000000072a0f7fae83d08d3e".to_string(),
+            //     "0000000000000000000000000000000000000000000000000001f43f8eef8b17".to_string(),
+            //     "0000000000000000000000000000000000000000000000027e97ca9e30dd7cc9".to_string(),
+            //     "000000000000000000000000000000000000000000000001f3ff9cb7a33de75c".to_string(),
+            //     "0000000000000000000000000000000000000000000000037df5bdde1ff1e429".to_string(),
+            //     "00000000000000000000000000000000000000000000000000003bcf11ee543a".to_string(),
+            //     "0000000000000000000000000000000000000000000000013f7226bad681f663".to_string(),
+            //     "000000000000000000000000000000000000000000000007733d6e37784c3012".to_string(),
+            //     "00000000000000000000000000000000000000000000000b68afd1ffec0b5fa6".to_string(),
+            //     "00000000000000000000000000000000000000000000000000020b92ebc4d54c".to_string(),
+            //     "0000000000000000000000000000000000000000000000037259271189baf14f".to_string(),
+            //     "0000000000000000000000000000000000000000000000079ba35fd9d018a6e8".to_string(),
+            //     "00000000000000000000000000000000000000000000000e30ca4ad2cf623585".to_string(),
+            //     "0000000000000000000000000000000000000000000000000001a54b8e7eb5a1".to_string(),
+            //     // ----
+            //     // "0x00000000000000000000000000000000a00f57a134784519472096820e92cec2".to_string(),
+            //     // "0x000000000000000000000000000000003a61309a6264288eca6249489985e697".to_string(),
+            //     // "0x00000000000000000000000000000000000000000000000ca5a4dc34aa210a90".to_string(),
+            //     // "0x000000000000000000000000000000000000000000000005252b3d15a6365cee".to_string(),
+            //     // "0x000000000000000000000000000000000000000000000005eec9774d0e30e200".to_string(),
+            //     // "0x000000000000000000000000000000000000000000000000000012125cae58c5".to_string(),
+            //     // "0x000000000000000000000000000000000000000000000003483c97bdac8912fe".to_string(),
+            //     // "0x00000000000000000000000000000000000000000000000ced08ad996c6b0ba8".to_string(),
+            //     // "0x00000000000000000000000000000000000000000000000c6756569238ac6125".to_string(),
+            //     // "0x0000000000000000000000000000000000000000000000000000a600d7d89789".to_string(),
+            //     // "0x000000000000000000000000000000000000000000000007ed40ee6b78a196f3".to_string(),
+            //     // "0x0000000000000000000000000000000000000000000000084823c8f4d4ba4648".to_string(),
+            //     // "0x00000000000000000000000000000000000000000000000bf7f1daaa6cf1960a".to_string(),
+            //     // "0x00000000000000000000000000000000000000000000000000022065f6ca11e0".to_string(),
+            //     // "0x000000000000000000000000000000000000000000000001da395d997d550353".to_string(),
+            //     // "0x00000000000000000000000000000000000000000000000eaff404640df8e581".to_string(),
+            //     // "0x00000000000000000000000000000000000000000000000b5c2bf33d9c681cd7".to_string(),
+            //     // "0x00000000000000000000000000000000000000000000000000008b02ca7dddc7".to_string(),
+            // ];
+
+            // let mut frs: Vec<Fr> = Vec::new();
+            // let instance_strs = aggregation_proof.instance.clone();
+            // for val in instance_strs {
+            //     let fr: Fr =
+            //         Fr::from_bytes(&U256::from_str(val.as_str()).unwrap().to_be_bytes()).unwrap();
+            //     frs.push(fr);
+            // }
+
+            // let my_instances: Vec<Vec<Fr>> = vec![frs];
+
             let proof = {
                 let time_started = Instant::now();
                 #[cfg(feature = "evm-verifier")]
@@ -248,6 +307,7 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                 };
 
                 let v = gen_evm_proof_gwc(&agg_params, &agg_pk, agg_circuit, agg_instance);
+                // let v = gen_evm_proof_gwc(&agg_params, &agg_pk, agg_circuit, my_instances);
                 #[cfg(feature = "evm-verifier")]
                 {
                     let deployment_code = evm_verifier_helper::gen_verifier(
@@ -504,6 +564,19 @@ impl SharedState {
                 //     println!("Read in proof: {:?}", proof);
                 //     exit(1);
                 // }
+
+                // let ur = "0x00000000000000000000000000000000a00f57a134784519472096820e92cec2"
+                //     .to_string();
+                // println!("ur   = {}", ur);
+                // let trim = ur.as_str()[2..].to_string();
+                // println!("trim = {}", trim);
+                // let u = U256::from_str(ur.as_str()).unwrap();
+                // println!("u {:?}", u);
+                // let u = U256::from_str(trim.as_str()).unwrap();
+                // println!("u {:#066x}", u);
+
+                // exit(0);
+
                 let witness = match prover_mode {
                     ProverMode::WitnessCapture | ProverMode::LegacyProver => {
                         println!("call from_request");
@@ -616,17 +689,21 @@ impl SharedState {
                     gas: witness.gas_used(),
                 };
 
-                let proof = res.clone();
-                // choose the aggregation proof if not empty
-                let (is_aggregated, proof_result) = {
-                    if proof.aggregation.proof.len() != 0 {
-                        (true, proof.aggregation)
-                    } else {
-                        (false, proof.circuit)
-                    }
-                };
-
+                println!(
+                    "proof.aggregation.proof.len() {}",
+                    res.aggregation.proof.len()
+                );
                 // START
+                // let proof = res.clone();
+                // // choose the aggregation proof if not empty
+                // let (is_aggregated, proof_result) = {
+                //     if proof.aggregation.proof.len() != 0 {
+                //         (true, proof.aggregation)
+                //     } else {
+                //         (false, proof.circuit)
+                //     }
+                // };
+
                 // println!("next 1");
 
                 // let mut verifier_calldata = vec![];
@@ -695,14 +772,14 @@ impl SharedState {
                 // //     .await
                 // //     .expect("receipt");
 
-                // if prover_mode == ProverMode::OfflineProver {
-                //     let jproof = json!(res).to_string();
-                //     let jcalldata = json!(calldata).to_string();
-                //     write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
-                //     write("calldata.json", jcalldata).unwrap();
-                //     println!("done creating proof: write and exit");
-                //     exit(1);
-                // }
+                if prover_mode != ProverMode::WitnessCapture {
+                    let jproof = json!(res).to_string();
+                    // let jcalldata = json!(calldata).to_string();
+                    write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
+                    // write("calldata.json", jcalldata).unwrap();
+                    println!("done creating proof: write and exit");
+                    exit(1);
+                }
                 // END
 
                 Ok(res)
