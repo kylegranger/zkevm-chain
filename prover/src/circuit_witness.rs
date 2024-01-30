@@ -186,8 +186,8 @@ impl CircuitWitness {
             max_evm_rows: circuit_config.pad_to,
             max_keccak_rows: circuit_config.keccak_padding,
         };
-        println!("*** CircuitsParams {:?}", circuit_config);
-        println!("*** pi {:?}", pi);
+        // println!("*** CircuitsParams {:?}", circuit_config);
+        // println!("*** pi {:?}", pi);
 
         let pi: ProtocolInstance = pi.clone().into();
         let builder = BuilderClient::new(geth_client, circuit_params, Some(pi.clone())).await?;

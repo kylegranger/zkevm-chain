@@ -3,34 +3,22 @@ use crate::circuits::*;
 use crate::utils::collect_instance_hex;
 use crate::utils::fixed_rng;
 use crate::utils::gen_proof;
+use crate::utils::verify;
 use crate::Fr;
 use crate::G1Affine;
 use crate::ProverKey;
 use crate::ProverParams;
 use eth_types::ToBigEndian;
+use eth_types::U256;
 use ethers_core::abi::Abi;
 use ethers_core::abi::AbiParser;
-// use ethers_core::abi::RawLog;
-// use ethers_core::abi::Token;
-use ethers_core::abi::Tokenizable;
-
-// use halo2_proofs::dev::MockProver;
-// use halo2_proofs::halo2curves::ff::PrimeField;
-// use halo2_proofs::plonk::verify_proof;
-// use halo2_proofs::plonk::Circuit;
-// use halo2_proofs::poly::commitment::Params;
-// use halo2_proofs::poly::commitment::ParamsProver;
-// use halo2_proofs::poly::kzg::multiopen::ProverGWC;
-// use halo2_proofs::poly::kzg::multiopen::VerifierGWC;
-// use halo2_proofs::poly::kzg::strategy::SingleStrategy;
-// use halo2_proofs::transcript::EncodedChallenge;
-// use halo2_proofs::transcript::TranscriptReadBuffer;
-// use halo2_proofs::transcript::TranscriptWriterBuffer;
-use ethers_core::types::{Bytes, U256};
+use halo2_proofs::halo2curves::serde::SerdeObject;
 use serde_json::json;
 use std::fs::write;
+use std::io::Read;
 use std::process::exit;
 use std::str::FromStr;
+use std::time::SystemTime;
 
 #[cfg(feature = "evm-verifier")]
 mod evm_verifier_helper {
@@ -175,6 +163,12 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
             circuit_proof.k = circuit_param.k() as u8;
         }
         circuit_proof.k = circuit_param.k() as u8;
+        let time1 = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        println!("start gen_pk {:?}", time1);
+
         // generate and cache the prover key
         let pk = {
             let cache_key = format!(
@@ -191,6 +185,15 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                 .await
                 .map_err(|e| e.to_string())?
         };
+
+        let time1 = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        println!("done gen_pk {:?}", time1);
+
+        // println!("prover key (pk): {:?}", pk);
+        // let jpk = json!(pk).to_string();
 
         let circuit_instance = circuit.instance();
         circuit_proof.instance = collect_instance_hex(&circuit_instance);
@@ -307,7 +310,6 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                 };
 
                 let v = gen_evm_proof_gwc(&agg_params, &agg_pk, agg_circuit, agg_instance);
-                // let v = gen_evm_proof_gwc(&agg_params, &agg_pk, agg_circuit, my_instances);
                 #[cfg(feature = "evm-verifier")]
                 {
                     let deployment_code = evm_verifier_helper::gen_verifier(
@@ -363,6 +365,133 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
     Ok((circuit_config, circuit_proof, aggregation_proof))
 }
 
+async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
+    shared_state: &SharedState,
+    task_options: &ProofRequestOptions,
+    circuit_config: CircuitConfig,
+    circuit: C,
+) {
+    // println!(
+    //     "verify_proof: Using circuit parameters: {:#?}",
+    //     circuit_config
+    // );
+
+    let jproof = std::fs::read_to_string(task_options.clone().proof_path.unwrap()).unwrap();
+    let mut proofs: Proofs = serde_json::from_str(&jproof).unwrap();
+
+    let mut circuit_proof = ProofResult {
+        label: format!(
+            "{}-{}",
+            task_options.circuit, circuit_config.block_gas_limit
+        ),
+        ..Default::default()
+    };
+    let universe_k = circuit_config.min_k.max(circuit_config.min_k_aggregation);
+    let (base_param, param_path) = get_or_gen_param(task_options, universe_k);
+    let mut aggregation_param = (*base_param).clone();
+    let mut circuit_param = aggregation_param.clone();
+    if circuit_param.k() as usize > circuit_config.min_k {
+        circuit_param.downsize(circuit_config.min_k as u32);
+        circuit_proof.k = circuit_param.k() as u8;
+    }
+    circuit_proof.k = circuit_param.k() as u8;
+    let time1 = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    println!("start gen_pk {:?}", time1);
+
+    // generate and cache the prover key
+    let pk = {
+        let cache_key = format!(
+            "{}{}{:?}",
+            &task_options.circuit, &param_path, &circuit_config
+        );
+        shared_state
+            .gen_pk(
+                &cache_key,
+                &Arc::new(circuit_param.clone()),
+                &circuit,
+                &mut circuit_proof.aux,
+            )
+            .await
+            .map_err(|e| e.to_string())
+            .unwrap()
+    };
+
+    let time1 = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    println!("done gen_pk {:?}", time1);
+
+    // println!("prover key (pk): {:?}", pk);
+    // let jpk = json!(pk).to_string();
+
+    let circuit_instance = circuit.instance();
+    circuit_proof.instance = collect_instance_hex(&circuit_instance);
+    let mut proof_bytes = Vec::new();
+    for b in proofs.circuit.proof.iter() {
+        proof_bytes.push(*b);
+    }
+
+    // let sample = circuit_instance[0][0];
+    // let raw = sample.to_raw_bytes();
+    println!("proof file instances: {:?}", proofs.circuit.instance);
+    println!("generated instances: {:?}", circuit_instance);
+    // println!("raw bytes: {:?}", raw);
+
+    // let jinstance = json!(circuit_instance).to_string();
+
+    let mut frs: Vec<Fr> = Vec::new();
+    let instance_strs = proofs.circuit.instance.clone();
+    for val in instance_strs {
+        let u = U256::from_str(val.as_str()).unwrap();
+        println!("u {:#066x}", u);
+
+        let temp = u.to_be_bytes();
+        let d = u64::from_be_bytes(temp[0..8].try_into().unwrap());
+        let c = u64::from_be_bytes(temp[8..16].try_into().unwrap());
+        let b = u64::from_be_bytes(temp[16..24].try_into().unwrap());
+        let a = u64::from_be_bytes(temp[24..32].try_into().unwrap());
+        println!("  a {:#x}", a);
+        println!("  b {:#x}", b);
+        println!("  c {:#x}", c);
+        println!("  d {:#x}", d);
+
+        // let temp = u.to_be_bytes();
+        // // let a = temp.read_u64::<BigEndian>().unwrap();
+
+        // let a = u64::from_be_bytes(temp);
+
+        let fr = Fr::from_raw([a, b, c, d]);
+        println!("  did it {:?}", fr);
+        frs.push(fr);
+    }
+
+    let my_instances: Vec<Vec<Fr>> = vec![frs];
+
+    // // let u = U256::from_str(trim.as_str()).unwrap();
+    // let mut frs: Vec<Fr> = Vec::new();
+    // let temp = proofs.circuit.instance.clone();
+    // for val in temp {
+    //     let fr: Fr = Fr::from_bytes(&U256::from_str(val.as_str()).unwrap().to_be_bytes()).unwrap();
+    //     println!("  fr: {:?}", fr);
+    //     frs.push(fr);
+    // }
+
+    // let my_instances: Vec<Vec<Fr>> = vec![frs];
+    // println!("my_instances: {:?}", my_instances);
+
+    let _proof = verify::<_, EvmTranscript<G1Affine, _, _, _>>(
+        proof_bytes,
+        &circuit_param,
+        &pk,
+        my_instances.clone(),
+        &mut proofs.circuit.aux,
+    );
+}
+
 macro_rules! compute_proof_wrapper {
     ($shared_state:expr, $task_options:expr, $witness:expr, $CIRCUIT:ident) => {{
         let timing = Instant::now();
@@ -378,6 +507,23 @@ macro_rules! compute_proof_wrapper {
             compute_proof(&$shared_state, &$task_options, CIRCUIT_CONFIG, circuit).await?;
         circuit_proof.aux.circuit = timing;
         (circuit_config, circuit_proof, aggregation_proof)
+    }};
+}
+
+macro_rules! compute_verifier_wrapper {
+    ($shared_state:expr, $task_options:expr, $witness:expr, $CIRCUIT:ident) => {{
+        let timing = Instant::now();
+        let circuit = $CIRCUIT::<
+            { CIRCUIT_CONFIG.max_txs },
+            { CIRCUIT_CONFIG.max_calldata },
+            { CIRCUIT_CONFIG.max_rws },
+            { CIRCUIT_CONFIG.max_copy_rows },
+            _,
+        >(&$witness, fixed_rng())?;
+        let timing = Instant::now().duration_since(timing).as_millis() as u32;
+        verify_proof(&$shared_state, &$task_options, CIRCUIT_CONFIG, circuit).await;
+        // circuit_proof.aux.circuit = timing;
+        // (circuit_config, circuit_proof, aggregation_proof)
     }};
 }
 
@@ -540,30 +686,12 @@ impl SharedState {
             let self_copy = self.clone();
             let prover_mode = task_options_copy.prover_mode;
             tokio::spawn(async move {
-                // if prover_mode == ProverMode::Verifier {
-                //     let jproof =
-                //         std::fs::read_to_string(task_options_copy.clone().proof_path.unwrap())
-                //             .unwrap();
-                //     let proof: Proofs = serde_json::from_str(&jproof).unwrap();
-
-                //     // xxx
-                //     let res = {
-                //         let time_started = Instant::now();
-                //         let v = verify_proof::<_, VerifierGWC<_>, _, TR, _>(
-                //             params.verifier_params(),
-                //             pk.get_vk(),
-                //             SingleStrategy::new(params.verifier_params()),
-                //             &[inputs.as_slice()],
-                //             &mut transcript,
-                //         );
-                //         aux.verify = Instant::now().duration_since(time_started).as_millis() as u32;
-                //         v
-                //     };
-                //     println!("XXX: res {:?}", res);
-
-                //     println!("Read in proof: {:?}", proof);
-                //     exit(1);
-                // }
+                // let time1 = Instant::now().elapsed().as_millis();
+                let time1 = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis();
+                println!("time1 {:?}", time1);
 
                 // let ur = "0x00000000000000000000000000000000a00f57a134784519472096820e92cec2"
                 //     .to_string();
@@ -584,7 +712,7 @@ impl SharedState {
                             .await
                             .map_err(|e| e.to_string())?
                     }
-                    ProverMode::OfflineProver => {
+                    _ => {
                         let jwitness = std::fs::read_to_string(
                             task_options_copy.clone().witness_path.unwrap(),
                         )
@@ -593,6 +721,40 @@ impl SharedState {
                     }
                     _ => panic!("no valid PROVERD_MODE"),
                 };
+
+                if prover_mode == ProverMode::Verifier {
+                    crate::match_circuit_params!(
+                        witness.gas_used(),
+                        {
+                            match task_options_copy.circuit.as_str() {
+                                "super" => {
+                                    compute_verifier_wrapper!(
+                                        self_copy,
+                                        task_options_copy,
+                                        &witness,
+                                        gen_super_circuit
+                                    )
+                                }
+                                _ => panic!("unknown circuit"),
+                            }
+                        },
+                        {
+                            return Err(format!(
+                                "No circuit parameters found for block with gas used={}",
+                                witness.gas_used()
+                            ));
+                        }
+                    );
+
+                    let time2 = SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis();
+
+                    println!("time2 {:?}", time2);
+                    println!("delta {:?}", time2 - time1);
+                    exit(0);
+                }
 
                 if prover_mode == ProverMode::WitnessCapture {
                     let jwitness = json!(witness).to_string();
@@ -771,6 +933,14 @@ impl SharedState {
                 // // self.transaction_to_l1(l1_bridge_addr, U256::zero(), calldata)
                 // //     .await
                 // //     .expect("receipt");
+                // END
+                let time2 = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis();
+
+                println!("time2 {:?}", time2);
+                println!("delta {:?}", time2 - time1);
 
                 if prover_mode != ProverMode::WitnessCapture {
                     let jproof = json!(res).to_string();
@@ -780,7 +950,6 @@ impl SharedState {
                     println!("done creating proof: write and exit");
                     exit(1);
                 }
-                // END
 
                 Ok(res)
             })
