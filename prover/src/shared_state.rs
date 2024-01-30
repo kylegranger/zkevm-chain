@@ -171,10 +171,7 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
 
         // generate and cache the prover key
         let pk = {
-            let cache_key = format!(
-                "{}{}{:?}",
-                &task_options.circuit, &param_path, &circuit_config
-            );
+            let cache_key = "cache_key.json".to_string();
             shared_state
                 .gen_pk(
                     &cache_key,
@@ -225,10 +222,7 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
             };
 
             let agg_pk = {
-                let cache_key = format!(
-                    "{}-agg-{}{:?}",
-                    &task_options.circuit, &agg_param_path, &circuit_config
-                );
+                let cache_key = "cache_key.json".to_string();
                 shared_state
                     .gen_pk(
                         &cache_key,
@@ -241,62 +235,6 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
             };
 
             let agg_instance = agg_circuit.instance();
-            // println!(
-            //     "agg_instance.num_instance a {:?}",
-            //     agg_instance.num_instance()
-            // );
-            // println!("agg_instance aa {:?}", agg_instance);
-
-            // aggregation_proof.instance = collect_instance_hex(&agg_instance);
-            // aggregation_proof.instance = vec![
-            //     "000000000000000000000000000000001727e2bd79aa6df9d4329f0cd874c3d8".to_string(),
-            //     "00000000000000000000000000000000092e233038dceeccab2420055bc5752c".to_string(),
-            //     "00000000000000000000000000000000000000000000000f08f24b0443264549".to_string(),
-            //     "00000000000000000000000000000000000000000000000f0e49c5f0677ad9cc".to_string(),
-            //     "0000000000000000000000000000000000000000000000072a0f7fae83d08d3e".to_string(),
-            //     "0000000000000000000000000000000000000000000000000001f43f8eef8b17".to_string(),
-            //     "0000000000000000000000000000000000000000000000027e97ca9e30dd7cc9".to_string(),
-            //     "000000000000000000000000000000000000000000000001f3ff9cb7a33de75c".to_string(),
-            //     "0000000000000000000000000000000000000000000000037df5bdde1ff1e429".to_string(),
-            //     "00000000000000000000000000000000000000000000000000003bcf11ee543a".to_string(),
-            //     "0000000000000000000000000000000000000000000000013f7226bad681f663".to_string(),
-            //     "000000000000000000000000000000000000000000000007733d6e37784c3012".to_string(),
-            //     "00000000000000000000000000000000000000000000000b68afd1ffec0b5fa6".to_string(),
-            //     "00000000000000000000000000000000000000000000000000020b92ebc4d54c".to_string(),
-            //     "0000000000000000000000000000000000000000000000037259271189baf14f".to_string(),
-            //     "0000000000000000000000000000000000000000000000079ba35fd9d018a6e8".to_string(),
-            //     "00000000000000000000000000000000000000000000000e30ca4ad2cf623585".to_string(),
-            //     "0000000000000000000000000000000000000000000000000001a54b8e7eb5a1".to_string(),
-            //     // ----
-            //     // "0x00000000000000000000000000000000a00f57a134784519472096820e92cec2".to_string(),
-            //     // "0x000000000000000000000000000000003a61309a6264288eca6249489985e697".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000ca5a4dc34aa210a90".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000005252b3d15a6365cee".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000005eec9774d0e30e200".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000000000012125cae58c5".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000003483c97bdac8912fe".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000ced08ad996c6b0ba8".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000c6756569238ac6125".to_string(),
-            //     // "0x0000000000000000000000000000000000000000000000000000a600d7d89789".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000007ed40ee6b78a196f3".to_string(),
-            //     // "0x0000000000000000000000000000000000000000000000084823c8f4d4ba4648".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000bf7f1daaa6cf1960a".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000000022065f6ca11e0".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000001da395d997d550353".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000eaff404640df8e581".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000b5c2bf33d9c681cd7".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000000008b02ca7dddc7".to_string(),
-            // ];
-
-            // let mut frs: Vec<Fr> = Vec::new();
-            // let instance_strs = aggregation_proof.instance.clone();
-            // for val in instance_strs {
-            //     let fr: Fr =
-            //         Fr::from_bytes(&U256::from_str(val.as_str()).unwrap().to_be_bytes()).unwrap();
-            //     frs.push(fr);
-            // }
-
-            // let my_instances: Vec<Vec<Fr>> = vec![frs];
 
             let proof = {
                 let time_started = Instant::now();
@@ -312,6 +250,7 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                 let v = gen_evm_proof_gwc(&agg_params, &agg_pk, agg_circuit, agg_instance);
                 #[cfg(feature = "evm-verifier")]
                 {
+                    println!("gen_verifier");
                     let deployment_code = evm_verifier_helper::gen_verifier(
                         &agg_params,
                         &agg_pk.get_vk(),
@@ -321,9 +260,15 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                         num_instances,
                         evm_verifier_helper::AccumulationSchemeType::GwcType,
                     );
+                    println!("deployment_code: {:?}", deployment_code);
                     let evm_verifier_bytecode =
                         evm_verifier_helper::evm::compile_solidity(&deployment_code);
+                    println!(
+                        "evm_verifier_bytecode length: {:?}",
+                        evm_verifier_bytecode.len()
+                    );
                     evm_verifier_helper::evm_verify(evm_verifier_bytecode, instances, v.clone());
+                    println!("done evm_verify")
                 }
 
                 aggregation_proof.aux.proof =
@@ -378,6 +323,7 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
 
     let jproof = std::fs::read_to_string(task_options.clone().proof_path.unwrap()).unwrap();
     let mut proofs: Proofs = serde_json::from_str(&jproof).unwrap();
+    // let mut circuit_proof = proofs.circuit;
 
     let mut circuit_proof = ProofResult {
         label: format!(
@@ -403,10 +349,7 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
 
     // generate and cache the prover key
     let pk = {
-        let cache_key = format!(
-            "{}{}{:?}",
-            &task_options.circuit, &param_path, &circuit_config
-        );
+        let cache_key = "cache_key.json".to_string();
         shared_state
             .gen_pk(
                 &cache_key,
@@ -418,6 +361,14 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
             .map_err(|e| e.to_string())
             .unwrap()
     };
+
+    println!("....write key file");
+    pk.write(
+        &mut File::create("pk.json").unwrap(),
+        SerdeFormat::RawBytesUnchecked,
+    )
+    .unwrap();
+    // }
 
     let time1 = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -435,14 +386,6 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
         proof_bytes.push(*b);
     }
 
-    // let sample = circuit_instance[0][0];
-    // let raw = sample.to_raw_bytes();
-    println!("proof file instances: {:?}", proofs.circuit.instance);
-    println!("generated instances: {:?}", circuit_instance);
-    // println!("raw bytes: {:?}", raw);
-
-    // let jinstance = json!(circuit_instance).to_string();
-
     let mut frs: Vec<Fr> = Vec::new();
     let instance_strs = proofs.circuit.instance.clone();
     for val in instance_strs {
@@ -459,29 +402,12 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
         println!("  c {:#x}", c);
         println!("  d {:#x}", d);
 
-        // let temp = u.to_be_bytes();
-        // // let a = temp.read_u64::<BigEndian>().unwrap();
-
-        // let a = u64::from_be_bytes(temp);
-
         let fr = Fr::from_raw([a, b, c, d]);
         println!("  did it {:?}", fr);
         frs.push(fr);
     }
 
     let my_instances: Vec<Vec<Fr>> = vec![frs];
-
-    // // let u = U256::from_str(trim.as_str()).unwrap();
-    // let mut frs: Vec<Fr> = Vec::new();
-    // let temp = proofs.circuit.instance.clone();
-    // for val in temp {
-    //     let fr: Fr = Fr::from_bytes(&U256::from_str(val.as_str()).unwrap().to_be_bytes()).unwrap();
-    //     println!("  fr: {:?}", fr);
-    //     frs.push(fr);
-    // }
-
-    // let my_instances: Vec<Vec<Fr>> = vec![frs];
-    // println!("my_instances: {:?}", my_instances);
 
     let _proof = verify::<_, EvmTranscript<G1Affine, _, _, _>>(
         proof_bytes,
@@ -1078,13 +1004,13 @@ impl SharedState {
                 aux.pk = Instant::now().duration_since(time_started).as_millis() as u32;
                 pk
             };
-            if std::env::var("PROVERD_DUMP").is_ok() {
-                pk.write(
-                    &mut File::create(cache_key).unwrap(),
-                    SerdeFormat::RawBytesUnchecked,
-                )
-                .unwrap();
-            }
+            // if std::env::var("PROVERD_DUMP").is_ok() {
+            // let _ = pk.write(
+            //     &mut File::create(cache_key).unwrap(),
+            //     SerdeFormat::RawBytesUnchecked,
+            // );
+            // .unwrap();
+            // }
 
             let pk = Arc::new(pk);
 

@@ -134,7 +134,7 @@ async fn main() {
         proof_path,
         protocol_instance,
         mock: false,
-        aggregate: false,
+        aggregate: true,
         verify_proof: true,
         ..Default::default()
     };
