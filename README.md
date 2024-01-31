@@ -111,9 +111,9 @@ This mode performs a verification: a proof is read in and verified, with the res
 ### Example
 
 ```
-./prover_cmd verfier -p proof-17664.json
+./prover_cmd verfier -p proof.json
 ```
 
 Required parameters:
-- `-p`: proof output file
+- `-p`: proof input file
 
