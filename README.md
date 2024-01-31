@@ -25,6 +25,14 @@ There are four prover modes:
 - legacy prover
 - verifier
 
+Required is a 512MiB proof parameters file, kzg_bn254_22.srs.
+
+That may be gotten thusly:
+
+```
+wget https://storage.googleapis.com/zkevm-circuits-keys/kzg_bn254_22.srs <dest>
+```
+
 ## `witness_capture`
 
 Required parameters:

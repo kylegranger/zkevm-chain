@@ -736,7 +736,7 @@ impl SharedState {
                 if prover_mode != ProverMode::WitnessCapture {
                     let jproof = json!(res).to_string();
                     write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
-                    println!("done creating and writing proof to {:?}", task_options_copy.proof_path);
+                    println!("done creating and writing proof to {:?}", task_options_copy.proof_path.unwrap());
                     exit(1);
                 }
 
