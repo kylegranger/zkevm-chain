@@ -41,7 +41,7 @@ wget https://storage.googleapis.com/zkevm-circuits-keys/kzg_bn254_22.srs <dest>
 ### Solidity compiler
 
 `solc` must be in the path.
-It can easily be built from the sources in this repository:  https://github.com/ethereum/solidity
+It can be built from the sources in this repository:  https://github.com/ethereum/solidity
 
 I used this line for the cmake call:  
 ```
