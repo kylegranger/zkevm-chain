@@ -8,6 +8,7 @@ use crate::Fr;
 use crate::G1Affine;
 use crate::ProverKey;
 use crate::ProverParams;
+use eth_types::Bytes;
 use eth_types::ToBigEndian;
 use eth_types::U256;
 use ethers_core::abi::Abi;
@@ -20,7 +21,7 @@ use std::process::exit;
 use std::str::FromStr;
 use std::time::SystemTime;
 
-#[cfg(feature = "evm-verifier")]
+// #[cfg(feature = "evm-verifier")]
 mod evm_verifier_helper {
     pub use circuit_benchmarks::taiko_super_circuit::{evm_verify, gen_verifier};
     pub use snark_verifier::loader::evm;
@@ -126,8 +127,21 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
     task_options: &ProofRequestOptions,
     circuit_config: CircuitConfig,
     circuit: C,
-) -> Result<(CircuitConfig, ProofResult, ProofResult), String> {
-    log::info!("Using circuit parameters: {:#?}", circuit_config);
+) -> Result<(CircuitConfig, ProofResult, ProofResult, Vec<u8>), String> {
+    println!("Using circuit parameters: {:#?}", circuit_config);
+    let start = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    println!(
+        "start compute_proof {:?}",
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+            - start
+    );
+    let mut bytecode = Vec::<u8>::new();
 
     let mut circuit_proof = ProofResult {
         label: format!(
@@ -163,11 +177,14 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
             circuit_proof.k = circuit_param.k() as u8;
         }
         circuit_proof.k = circuit_param.k() as u8;
-        let time1 = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        println!("start gen_pk {:?}", time1);
+        println!(
+            "start gen_pk {:?}",
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+                - start
+        );
 
         // generate and cache the prover key
         let pk = {
@@ -186,11 +203,14 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                 .map_err(|e| e.to_string())?
         };
 
-        let time1 = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        println!("done gen_pk {:?}", time1);
+        println!(
+            "done gen_pk {:?}",
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+                - start
+        );
 
         // println!("prover key (pk): {:?}", pk);
         // let jpk = json!(pk).to_string();
@@ -198,6 +218,15 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
         let circuit_instance = circuit.instance();
         circuit_proof.instance = collect_instance_hex(&circuit_instance);
         if task_options.aggregate {
+            println!(
+                "start aggregate {:?}",
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis()
+                    - start
+            );
+
             let snark = gen_snark_gwc(&circuit_param, &pk, circuit, None::<&str>);
             circuit_proof.proof = snark.proof.clone().into();
             if std::env::var("PROVERD_DUMP").is_ok() {
@@ -239,68 +268,24 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                     .await
                     .map_err(|e| e.to_string())?
             };
+            println!(
+                "done app_pk {:?}",
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis()
+                    - start
+            );
 
             let agg_instance = agg_circuit.instance();
-            // println!(
-            //     "agg_instance.num_instance a {:?}",
-            //     agg_instance.num_instance()
-            // );
-            // println!("agg_instance aa {:?}", agg_instance);
-
-            // aggregation_proof.instance = collect_instance_hex(&agg_instance);
-            // aggregation_proof.instance = vec![
-            //     "000000000000000000000000000000001727e2bd79aa6df9d4329f0cd874c3d8".to_string(),
-            //     "00000000000000000000000000000000092e233038dceeccab2420055bc5752c".to_string(),
-            //     "00000000000000000000000000000000000000000000000f08f24b0443264549".to_string(),
-            //     "00000000000000000000000000000000000000000000000f0e49c5f0677ad9cc".to_string(),
-            //     "0000000000000000000000000000000000000000000000072a0f7fae83d08d3e".to_string(),
-            //     "0000000000000000000000000000000000000000000000000001f43f8eef8b17".to_string(),
-            //     "0000000000000000000000000000000000000000000000027e97ca9e30dd7cc9".to_string(),
-            //     "000000000000000000000000000000000000000000000001f3ff9cb7a33de75c".to_string(),
-            //     "0000000000000000000000000000000000000000000000037df5bdde1ff1e429".to_string(),
-            //     "00000000000000000000000000000000000000000000000000003bcf11ee543a".to_string(),
-            //     "0000000000000000000000000000000000000000000000013f7226bad681f663".to_string(),
-            //     "000000000000000000000000000000000000000000000007733d6e37784c3012".to_string(),
-            //     "00000000000000000000000000000000000000000000000b68afd1ffec0b5fa6".to_string(),
-            //     "00000000000000000000000000000000000000000000000000020b92ebc4d54c".to_string(),
-            //     "0000000000000000000000000000000000000000000000037259271189baf14f".to_string(),
-            //     "0000000000000000000000000000000000000000000000079ba35fd9d018a6e8".to_string(),
-            //     "00000000000000000000000000000000000000000000000e30ca4ad2cf623585".to_string(),
-            //     "0000000000000000000000000000000000000000000000000001a54b8e7eb5a1".to_string(),
-            //     // ----
-            //     // "0x00000000000000000000000000000000a00f57a134784519472096820e92cec2".to_string(),
-            //     // "0x000000000000000000000000000000003a61309a6264288eca6249489985e697".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000ca5a4dc34aa210a90".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000005252b3d15a6365cee".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000005eec9774d0e30e200".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000000000012125cae58c5".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000003483c97bdac8912fe".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000ced08ad996c6b0ba8".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000c6756569238ac6125".to_string(),
-            //     // "0x0000000000000000000000000000000000000000000000000000a600d7d89789".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000007ed40ee6b78a196f3".to_string(),
-            //     // "0x0000000000000000000000000000000000000000000000084823c8f4d4ba4648".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000bf7f1daaa6cf1960a".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000000022065f6ca11e0".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000001da395d997d550353".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000eaff404640df8e581".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000b5c2bf33d9c681cd7".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000000008b02ca7dddc7".to_string(),
-            // ];
-
-            // let mut frs: Vec<Fr> = Vec::new();
-            // let instance_strs = aggregation_proof.instance.clone();
-            // for val in instance_strs {
-            //     let fr: Fr =
-            //         Fr::from_bytes(&U256::from_str(val.as_str()).unwrap().to_be_bytes()).unwrap();
-            //     frs.push(fr);
-            // }
-
-            // let my_instances: Vec<Vec<Fr>> = vec![frs];
+            for fr in &agg_instance[0] {
+                let frstr = format!("{:?}", fr);
+                aggregation_proof.instance.push(frstr);
+            }
 
             let proof = {
                 let time_started = Instant::now();
-                #[cfg(feature = "evm-verifier")]
+                // #[cfg(feature = "evm-verifier")]
                 let (num_instances, instances, accumulator_indices) = {
                     (
                         agg_circuit.num_instance().clone(),
@@ -309,9 +294,36 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                     )
                 };
 
+                println!(
+                    "gen_evm_proof_gwc {:?}",
+                    SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                        - start
+                );
                 let v = gen_evm_proof_gwc(&agg_params, &agg_pk, agg_circuit, agg_instance);
-                #[cfg(feature = "evm-verifier")]
+                println!(
+                    "v length {:?} {:?}",
+                    v.len(),
+                    SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                        - start
+                );
+                // #[cfg(feature = "evm-verifier")]
                 {
+                    println!(
+                        "start gen_verifier {:?}",
+                        SystemTime::now()
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis()
+                            - start
+                    );
+
+                    println!("instances {:?}", instances);
                     let deployment_code = evm_verifier_helper::gen_verifier(
                         &agg_params,
                         &agg_pk.get_vk(),
@@ -321,9 +333,22 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                         num_instances,
                         evm_verifier_helper::AccumulationSchemeType::GwcType,
                     );
+                    println!("deployment_code len {:?}", deployment_code.len());
                     let evm_verifier_bytecode =
                         evm_verifier_helper::evm::compile_solidity(&deployment_code);
+                    println!(
+                        "evm_verifier_bytecode len {:?}",
+                        evm_verifier_bytecode.len()
+                    );
+
+                    bytecode.extend_from_slice(&evm_verifier_bytecode.as_slice());
+                    println!(
+                        "after append, evm_verifier_bytecode len {:?}",
+                        evm_verifier_bytecode.len()
+                    );
+                    println!("after append, bytecode len {:?}", bytecode.len());
                     evm_verifier_helper::evm_verify(evm_verifier_bytecode, instances, v.clone());
+                    println!("done evm_verify");
                 }
 
                 aggregation_proof.aux.proof =
@@ -362,7 +387,75 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
         }
     }
 
-    Ok((circuit_config, circuit_proof, aggregation_proof))
+    Ok((circuit_config, circuit_proof, aggregation_proof, bytecode))
+}
+
+fn fr_from_string(s: String) -> Fr {
+    let u = U256::from_str(s.as_str()).unwrap();
+    println!("u {:#066x}", u);
+
+    let temp = u.to_be_bytes();
+    let d = u64::from_be_bytes(temp[0..8].try_into().unwrap());
+    let c = u64::from_be_bytes(temp[8..16].try_into().unwrap());
+    let b = u64::from_be_bytes(temp[16..24].try_into().unwrap());
+    let a = u64::from_be_bytes(temp[24..32].try_into().unwrap());
+    println!("  a {:#x}", a);
+    println!("  b {:#x}", b);
+    println!("  c {:#x}", c);
+    println!("  d {:#x}", d);
+
+    // let temp = u.to_be_bytes();
+    // // let a = temp.read_u64::<BigEndian>().unwrap();
+
+    // let a = u64::from_be_bytes(temp);
+
+    let fr = Fr::from_raw([a, b, c, d]);
+    println!("  did it {:?}", fr);
+    fr
+}
+
+fn verify_from_proof(proofs: Proofs) {
+    // println!("verify_with_key, byte code len {}", vk.bytecode.len());
+    // println!("verify_with_key, isntance {:?}", vk.instance);
+    let mut temp = Vec::new();
+    for i in proofs.aggregation.instance {
+        let fr = fr_from_string(i);
+        temp.push(fr);
+    }
+    let instances = vec![temp];
+    let mut proof: Vec<u8> = Vec::new();
+    let mut bytecode: Vec<u8> = Vec::new();
+    println!("proofs.bytecode len {}", proofs.bytecode.len());
+    println!(
+        "proofs.aggregation.proof len {}",
+        proofs.aggregation.proof.len()
+    );
+    let bciter = proofs.bytecode.into_iter();
+    let agiter = proofs.aggregation.proof.into_iter();
+    // let bcptr = proofs.aggregation.proof.as_ptr();
+    // println!("proofs.bytecode len {}", proofs.bytecode.as_ptr());
+    // println!("proofs.aggregation.proof len {}", proofs.aggregation.proof.len());
+    for i in bciter {
+        bytecode.push(i);
+    }
+    for i in agiter {
+        proof.push(i);
+    }
+    println!("bytecode len is {}", bytecode.len());
+    println!("proof len is {}", proof.len());
+    // let evm_verifier_bytecode = vk.bytecode;
+
+    // // verification_key.extend_from_slice(&evm_verifier_bytecode.as_slice());
+    // println!(
+    //     "after append, evm_verifier_bytecode len {:?}",
+    //     evm_verifier_bytecode.len()
+    // );
+    // println!(
+    //     "after append, verification_key len {:?}",
+    //     verification_key.len()
+    // );
+    evm_verifier_helper::evm_verify(bytecode, instances, proof);
+    println!("done evm_verify");
 }
 
 async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
@@ -503,10 +596,10 @@ macro_rules! compute_proof_wrapper {
             _,
         >(&$witness, fixed_rng())?;
         let timing = Instant::now().duration_since(timing).as_millis() as u32;
-        let (circuit_config, mut circuit_proof, aggregation_proof) =
+        let (circuit_config, mut circuit_proof, aggregation_proof, bytecode) =
             compute_proof(&$shared_state, &$task_options, CIRCUIT_CONFIG, circuit).await?;
         circuit_proof.aux.circuit = timing;
-        (circuit_config, circuit_proof, aggregation_proof)
+        (circuit_config, circuit_proof, aggregation_proof, bytecode)
     }};
 }
 
@@ -693,6 +786,18 @@ impl SharedState {
                     .as_millis();
                 println!("time1 {:?}", time1);
 
+                if prover_mode == ProverMode::Verifier {
+                    let jproof = std::fs::read_to_string(
+                        task_options_copy.clone().proof_path.unwrap(),
+                    )
+                    .unwrap();
+                    let proofs: Proofs = serde_json::from_str(&jproof).unwrap();
+                    verify_from_proof(proofs);
+                    exit(0);
+                }
+
+
+
                 // let ur = "0x00000000000000000000000000000000a00f57a134784519472096820e92cec2"
                 //     .to_string();
                 // println!("ur   = {}", ur);
@@ -712,49 +817,15 @@ impl SharedState {
                             .await
                             .map_err(|e| e.to_string())?
                     }
-                    _ => {
+                    ProverMode::OfflineProver => {
                         let jwitness = std::fs::read_to_string(
                             task_options_copy.clone().witness_path.unwrap(),
                         )
                         .unwrap();
                         serde_json::from_str(&jwitness).unwrap()
                     }
-                    _ => panic!("no valid PROVERD_MODE"),
+                    _ => panic!("invalid prover mode"),
                 };
-
-                if prover_mode == ProverMode::Verifier {
-                    crate::match_circuit_params!(
-                        witness.gas_used(),
-                        {
-                            match task_options_copy.circuit.as_str() {
-                                "super" => {
-                                    compute_verifier_wrapper!(
-                                        self_copy,
-                                        task_options_copy,
-                                        &witness,
-                                        gen_super_circuit
-                                    )
-                                }
-                                _ => panic!("unknown circuit"),
-                            }
-                        },
-                        {
-                            return Err(format!(
-                                "No circuit parameters found for block with gas used={}",
-                                witness.gas_used()
-                            ));
-                        }
-                    );
-
-                    let time2 = SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_millis();
-
-                    println!("time2 {:?}", time2);
-                    println!("delta {:?}", time2 - time1);
-                    exit(0);
-                }
 
                 if prover_mode == ProverMode::WitnessCapture {
                     let jwitness = json!(witness).to_string();
@@ -763,7 +834,7 @@ impl SharedState {
                     exit(1);
                 }
 
-                let (config, circuit_proof, aggregation_proof) = crate::match_circuit_params!(
+                let (config, circuit_proof, aggregation_proof, bytecode) = crate::match_circuit_params!(
                     witness.gas_used(),
                     {
                         match task_options_copy.circuit.as_str() {
@@ -844,12 +915,20 @@ impl SharedState {
                     }
                 );
 
+                let bytes: Bytes = Bytes::from_iter(bytecode);
+
                 let res = Proofs {
                     config,
                     circuit: circuit_proof,
                     aggregation: aggregation_proof,
                     gas: witness.gas_used(),
+                    bytecode: bytes,
                 };
+
+                // let vk = VerificationKey {
+                //     bytecode: verification_key,
+                //     instance: res.aggregation.instance.clone()
+                // };
 
                 println!(
                     "proof.aggregation.proof.len() {}",
@@ -944,8 +1023,10 @@ impl SharedState {
 
                 if prover_mode != ProverMode::WitnessCapture {
                     let jproof = json!(res).to_string();
+                    // let jvk = json!(vk).to_string();
                     // let jcalldata = json!(calldata).to_string();
                     write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
+                    // write(task_options_copy.vk_path.clone().unwrap(), jvk).unwrap();
                     // write("calldata.json", jcalldata).unwrap();
                     println!("done creating proof: write and exit");
                     exit(1);

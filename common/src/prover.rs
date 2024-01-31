@@ -62,6 +62,16 @@ pub struct Proofs {
     pub aggregation: ProofResult,
     /// Gas used. Determines the upper ceiling for circuit parameters
     pub gas: u64,
+    /// byte code used for evm verifier
+    pub bytecode: Bytes,
+}
+
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+pub struct VerificationKey {
+    /// Circuit configuration used
+    pub bytecode: Vec<u8>,
+    // Public inputs
+    pub instance: Vec<String>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
