@@ -25,12 +25,31 @@ There are four prover modes:
 - legacy prover
 - verifier
 
+## Prerequisites
+
+
+### Parameters file
+
 Required is a 512MiB proof parameters file, kzg_bn254_22.srs.
 
 That may be gotten thusly:
 
 ```
 wget https://storage.googleapis.com/zkevm-circuits-keys/kzg_bn254_22.srs <dest>
+```
+
+### Solidity compiler
+
+`solc` must be in the path.
+It can easily be built from the sources in this repository:  https://github.com/ethereum/solidity
+
+I used this line for the cmake call:  
+```
+make .. -DUSE_Z3=OFF`
+```
+On our cloud server, I copied it into a path folder.
+```
+sudo cp solc /usr/local/bin
 ```
 
 ## `witness_capture`
