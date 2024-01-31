@@ -34,10 +34,10 @@ Required parameters:
 - `-w`: witness output file (json)
 
 
-### Example
+### Example: create a witness for block 57437
 
 ```
-./prover_cmd witness_capture -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -w witness-17664.json
+./prover_cmd witness_capture -b 57437 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -w witness.json
 ```
 
 
@@ -48,10 +48,10 @@ Required parameters:
 - `-p`: proof output file
 - `-w`: witness input file
 
-### Example
+### Example: create a proof from a witness
 
 ```
-./prover_cmd offline_prover -k kzg_bn254_22.srs -p proof-17664.json -w witness-17664.json
+./prover_cmd offline_prover -k kzg_bn254_22.srs -w witness.json -p proof.json
 ```
 
 
@@ -59,17 +59,19 @@ Required parameters:
 
 This is the original mode of operation for `prover_cmd`.  
 
-A witness is created with a connection to an L2 node, followed by the generation of the proof.  No artifacts are saved; the output is written to stdout.
+A witness is created with a connection to an L2 node, followed by the generation of the proof.  We do serialize the proof to a file.
+
 
 Required parameters:
 - `-b`: a block number
 - `-k`: parameters file with k value of 22.  This should be kzg_bn254_22.srs.
+- `-p`: proof output file
 - `-r`: an RPC url for the L2 Katla node
 
 ### Example
 
 ```
-./prover_cmd legacy_prover -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547
+./prover_cmd legacy_prover -b 57437 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -p proof.json
 ```
 
 ## `verifier`
