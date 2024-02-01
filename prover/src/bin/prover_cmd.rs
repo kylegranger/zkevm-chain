@@ -52,27 +52,23 @@ async fn main() {
             assert!(block_num.is_some(), "must pass in a block number");
             assert!(params_path.is_some(), "must pass in a kparams file");
             assert!(rpc_url.is_some(), "must pass in an L2 RPC url");
-            assert!(
-                witness_path.is_some(),
-                "must pass in a witness file for output"
-            );
+            assert!(witness_path.is_some(), "pass in a witness file for output");
         }
         ProverMode::OfflineProver => {
-            assert!(params_path.is_some(), "must pass in a kparams file");
-            assert!(proof_path.is_some(), "must pass in a proof file for output");
-            assert!(
-                witness_path.is_some(),
-                "must pass in a witness file for input"
-            );
+            assert!(params_path.is_some(), "pass in a kparams file");
+            assert!(proof_path.is_some(), "pass in a proof file for output");
+            assert!(witness_path.is_some(), "pass in a witness file for input");
         }
         ProverMode::LegacyProver => {
-            assert!(block_num.is_some(), "must pass in a block_num");
-            assert!(params_path.is_some(), "must pass in a kparams file");
-            assert!(rpc_url.is_some(), "must pass in an L2 RPC url");
-            assert!(proof_path.is_some(), "must pass in a proof file for output");
+            assert!(block_num.is_some(), "pass in a block_num");
+            assert!(params_path.is_some(), "pass in a kparams file");
+            assert!(rpc_url.is_some(), "pass in an L2 RPC url");
+            assert!(proof_path.is_some(), "pass in a proof file for output");
         }
         ProverMode::Verifier => {
-            assert!(proof_path.is_some(), "must pass in a proof file for input");
+            assert!(params_path.is_some(), "pass in a kparams file");
+            assert!(proof_path.is_some(), "pass in a proof file for input");
+            assert!(witness_path.is_some(), "pass in a witness file for output");
         }
     }
 

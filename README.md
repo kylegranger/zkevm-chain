@@ -25,6 +25,33 @@ There are four prover modes:
 - legacy prover
 - verifier
 
+## Prerequisites
+
+
+### Parameters file
+
+Required is a 512MiB proof parameters file, kzg_bn254_22.srs.
+
+That may be gotten thusly:
+
+```
+wget https://storage.googleapis.com/zkevm-circuits-keys/kzg_bn254_22.srs <dest>
+```
+
+### Solidity compiler
+
+`solc` must be in the path.
+It can be built from the sources in this repository:  https://github.com/ethereum/solidity
+
+I used this line for the cmake call:  
+```
+make .. -DUSE_Z3=OFF`
+```
+On our cloud server, I copied it into a path folder.
+```
+sudo cp solc /usr/local/bin
+```
+
 ## `witness_capture`
 
 Required parameters:
@@ -34,10 +61,10 @@ Required parameters:
 - `-w`: witness output file (json)
 
 
-### Example
+### Example: create a witness for block 57437
 
 ```
-./prover_cmd witness_capture -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -w witness-17664.json
+./prover_cmd witness_capture -b 57437 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -w witness.json
 ```
 
 
@@ -48,10 +75,10 @@ Required parameters:
 - `-p`: proof output file
 - `-w`: witness input file
 
-### Example
+### Example: create a proof from a witness
 
 ```
-./prover_cmd offline_prover -k kzg_bn254_22.srs -p proof-17664.json -w witness-17664.json
+./prover_cmd offline_prover -k kzg_bn254_22.srs -w witness.json -p proof.json
 ```
 
 
@@ -59,17 +86,19 @@ Required parameters:
 
 This is the original mode of operation for `prover_cmd`.  
 
-A witness is created with a connection to an L2 node, followed by the generation of the proof.  No artifacts are saved; the output is written to stdout.
+A witness is created with a connection to an L2 node, followed by the generation of the proof.  We do serialize the proof to a file.
+
 
 Required parameters:
 - `-b`: a block number
 - `-k`: parameters file with k value of 22.  This should be kzg_bn254_22.srs.
+- `-p`: proof output file
 - `-r`: an RPC url for the L2 Katla node
 
 ### Example
 
 ```
-./prover_cmd legacy_prover -b 17664 -k kzg_bn254_22.srs -r http://35.195.113.51:8547
+./prover_cmd legacy_prover -b 57437 -k kzg_bn254_22.srs -r http://35.195.113.51:8547 -p proof.json
 ```
 
 ## `verifier`
@@ -82,9 +111,8 @@ This mode performs a verification: a proof is read in and verified, with the res
 ### Example
 
 ```
-./prover_cmd verfier -p proof-17664.json
+./prover_cmd verfier -p proof.json
 ```
 
 Required parameters:
-- `-p`: proof output file
-
+- `-p`: proof input file

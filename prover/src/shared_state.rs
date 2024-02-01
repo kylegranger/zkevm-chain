@@ -371,10 +371,10 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
     circuit_config: CircuitConfig,
     circuit: C,
 ) {
-    // println!(
-    //     "verify_proof: Using circuit parameters: {:#?}",
-    //     circuit_config
-    // );
+    println!(
+        "verify_proof: Using circuit parameters: {:#?}",
+        circuit_config
+    );
 
     let jproof = std::fs::read_to_string(task_options.clone().proof_path.unwrap()).unwrap();
     let mut proofs: Proofs = serde_json::from_str(&jproof).unwrap();
@@ -723,6 +723,7 @@ impl SharedState {
                 };
 
                 if prover_mode == ProverMode::Verifier {
+                    println!("start on verifier");
                     crate::match_circuit_params!(
                         witness.gas_used(),
                         {
