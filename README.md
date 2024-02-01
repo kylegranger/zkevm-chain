@@ -38,20 +38,6 @@ That may be gotten thusly:
 wget https://storage.googleapis.com/zkevm-circuits-keys/kzg_bn254_22.srs <dest>
 ```
 
-### Solidity compiler
-
-`solc` must be in the path.
-It can be built from the sources in this repository:  https://github.com/ethereum/solidity
-
-I used this line for the cmake call:  
-```
-make .. -DUSE_Z3=OFF`
-```
-On our cloud server, I copied it into a path folder.
-```
-sudo cp solc /usr/local/bin
-```
-
 ## `witness_capture`
 
 Required parameters:
@@ -103,16 +89,15 @@ Required parameters:
 
 ## `verifier`
 
-This mode performs a verification: a proof is read in and verified, with the results written to stdout.
-
-**TBD**
-
+This mode performs a verification: a proof is read in and verified, with the results written to stdout.  For this proof method, the witness is still required in order to regenerate the circuit.
 
 ### Example
 
 ```
-./prover_cmd verfier -p proof.json
+./prover_cmd verifier -k kzg_bn254_22.srs -p proof.json -w witness-57437.json
 ```
 
 Required parameters:
+- `-k`: parameters file with k value of 22. This should be kzg_bn254_22.srs.
 - `-p`: proof input file
+- `-w`: witness input file

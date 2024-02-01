@@ -10,12 +10,8 @@ use crate::ProverKey;
 use crate::ProverParams;
 use eth_types::ToBigEndian;
 use eth_types::U256;
-use ethers_core::abi::Abi;
-use ethers_core::abi::AbiParser;
-use halo2_proofs::halo2curves::serde::SerdeObject;
 use serde_json::json;
 use std::fs::write;
-use std::io::Read;
 use std::process::exit;
 use std::str::FromStr;
 use std::time::SystemTime;
@@ -54,33 +50,15 @@ use zkevm_circuits::util::SubCircuit;
 use zkevm_common::json_rpc::jsonrpc_request_client;
 use zkevm_common::prover::*;
 
-// fn get_abi() -> Abi {
-//     AbiParser::default()
-//         .parse(&[
-//                "function testPublicInputCommitment(uint256 MAX_TXS, uint256 MAX_CALLDATA, uint256 chainId, uint256 parentStateRoot, bytes calldata witness) returns (uint256[])",
-//         ])
-//         .expect("parse abi")
-// }
-
-fn get_abi() -> Abi {
-    AbiParser::default()
-        .parse(&[
-            "event BlockSubmitted()",
-            "event BlockFinalized(bytes32 blockHash)",
-            "event MessageDispatched(address from, address to, uint256 value, uint256 fee, uint256 deadline, uint256 nonce, bytes data)",
-            "event MessageDelivered(bytes32 id)",
-            "function submitBlock(bytes)",
-            "function finalizeBlock(bytes proof)",
-            "function deliverMessageWithProof(address from, address to, uint256 value, uint256 fee, uint256 deadline, uint256 nonce, bytes data, bytes proof)",
-            "function stateRoots(bytes32 blockHash) returns (bytes32)",
-            "function importForeignBlock(uint256 blockNumber, bytes32 blockHash)",
-            "function initGenesis(bytes32 blockHash, bytes32 stateRoot)",
-            "function buildCommitment(bytes) returns (uint256[])",
-            "function importForeignBridgeState(bytes, bytes)",
-            "function multicall()",
-            "function getTimestampForStorageRoot(bytes32 storageRoot) returns (uint256)",
-        ])
-        .expect("parse abi")
+fn fr_from_string(s: String) -> Fr {
+    let u = U256::from_str(s.as_str()).unwrap();
+    let bytes = u.to_be_bytes();
+    let d = u64::from_be_bytes(bytes[0..8].try_into().unwrap());
+    let c = u64::from_be_bytes(bytes[8..16].try_into().unwrap());
+    let b = u64::from_be_bytes(bytes[16..24].try_into().unwrap());
+    let a = u64::from_be_bytes(bytes[24..32].try_into().unwrap());
+    let fr = Fr::from_raw([a, b, c, d]);
+    fr
 }
 
 fn get_param_path(path: &String, k: usize) -> PathBuf {
@@ -163,11 +141,6 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
             circuit_proof.k = circuit_param.k() as u8;
         }
         circuit_proof.k = circuit_param.k() as u8;
-        let time1 = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        println!("start gen_pk {:?}", time1);
 
         // generate and cache the prover key
         let pk = {
@@ -185,15 +158,6 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                 .await
                 .map_err(|e| e.to_string())?
         };
-
-        let time1 = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        println!("done gen_pk {:?}", time1);
-
-        // println!("prover key (pk): {:?}", pk);
-        // let jpk = json!(pk).to_string();
 
         let circuit_instance = circuit.instance();
         circuit_proof.instance = collect_instance_hex(&circuit_instance);
@@ -241,62 +205,6 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
             };
 
             let agg_instance = agg_circuit.instance();
-            // println!(
-            //     "agg_instance.num_instance a {:?}",
-            //     agg_instance.num_instance()
-            // );
-            // println!("agg_instance aa {:?}", agg_instance);
-
-            // aggregation_proof.instance = collect_instance_hex(&agg_instance);
-            // aggregation_proof.instance = vec![
-            //     "000000000000000000000000000000001727e2bd79aa6df9d4329f0cd874c3d8".to_string(),
-            //     "00000000000000000000000000000000092e233038dceeccab2420055bc5752c".to_string(),
-            //     "00000000000000000000000000000000000000000000000f08f24b0443264549".to_string(),
-            //     "00000000000000000000000000000000000000000000000f0e49c5f0677ad9cc".to_string(),
-            //     "0000000000000000000000000000000000000000000000072a0f7fae83d08d3e".to_string(),
-            //     "0000000000000000000000000000000000000000000000000001f43f8eef8b17".to_string(),
-            //     "0000000000000000000000000000000000000000000000027e97ca9e30dd7cc9".to_string(),
-            //     "000000000000000000000000000000000000000000000001f3ff9cb7a33de75c".to_string(),
-            //     "0000000000000000000000000000000000000000000000037df5bdde1ff1e429".to_string(),
-            //     "00000000000000000000000000000000000000000000000000003bcf11ee543a".to_string(),
-            //     "0000000000000000000000000000000000000000000000013f7226bad681f663".to_string(),
-            //     "000000000000000000000000000000000000000000000007733d6e37784c3012".to_string(),
-            //     "00000000000000000000000000000000000000000000000b68afd1ffec0b5fa6".to_string(),
-            //     "00000000000000000000000000000000000000000000000000020b92ebc4d54c".to_string(),
-            //     "0000000000000000000000000000000000000000000000037259271189baf14f".to_string(),
-            //     "0000000000000000000000000000000000000000000000079ba35fd9d018a6e8".to_string(),
-            //     "00000000000000000000000000000000000000000000000e30ca4ad2cf623585".to_string(),
-            //     "0000000000000000000000000000000000000000000000000001a54b8e7eb5a1".to_string(),
-            //     // ----
-            //     // "0x00000000000000000000000000000000a00f57a134784519472096820e92cec2".to_string(),
-            //     // "0x000000000000000000000000000000003a61309a6264288eca6249489985e697".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000ca5a4dc34aa210a90".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000005252b3d15a6365cee".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000005eec9774d0e30e200".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000000000012125cae58c5".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000003483c97bdac8912fe".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000ced08ad996c6b0ba8".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000c6756569238ac6125".to_string(),
-            //     // "0x0000000000000000000000000000000000000000000000000000a600d7d89789".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000007ed40ee6b78a196f3".to_string(),
-            //     // "0x0000000000000000000000000000000000000000000000084823c8f4d4ba4648".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000bf7f1daaa6cf1960a".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000000022065f6ca11e0".to_string(),
-            //     // "0x000000000000000000000000000000000000000000000001da395d997d550353".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000eaff404640df8e581".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000b5c2bf33d9c681cd7".to_string(),
-            //     // "0x00000000000000000000000000000000000000000000000000008b02ca7dddc7".to_string(),
-            // ];
-
-            // let mut frs: Vec<Fr> = Vec::new();
-            // let instance_strs = aggregation_proof.instance.clone();
-            // for val in instance_strs {
-            //     let fr: Fr =
-            //         Fr::from_bytes(&U256::from_str(val.as_str()).unwrap().to_be_bytes()).unwrap();
-            //     frs.push(fr);
-            // }
-
-            // let my_instances: Vec<Vec<Fr>> = vec![frs];
 
             let proof = {
                 let time_started = Instant::now();
@@ -371,10 +279,7 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
     circuit_config: CircuitConfig,
     circuit: C,
 ) {
-    println!(
-        "verify_proof: Using circuit parameters: {:#?}",
-        circuit_config
-    );
+    println!("verify_proof");
 
     let jproof = std::fs::read_to_string(task_options.clone().proof_path.unwrap()).unwrap();
     let mut proofs: Proofs = serde_json::from_str(&jproof).unwrap();
@@ -388,18 +293,13 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
     };
     let universe_k = circuit_config.min_k.max(circuit_config.min_k_aggregation);
     let (base_param, param_path) = get_or_gen_param(task_options, universe_k);
-    let mut aggregation_param = (*base_param).clone();
+    let aggregation_param = (*base_param).clone();
     let mut circuit_param = aggregation_param.clone();
     if circuit_param.k() as usize > circuit_config.min_k {
         circuit_param.downsize(circuit_config.min_k as u32);
         circuit_proof.k = circuit_param.k() as u8;
     }
     circuit_proof.k = circuit_param.k() as u8;
-    let time1 = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    println!("start gen_pk {:?}", time1);
 
     // generate and cache the prover key
     let pk = {
@@ -419,15 +319,6 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
             .unwrap()
     };
 
-    let time1 = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    println!("done gen_pk {:?}", time1);
-
-    // println!("prover key (pk): {:?}", pk);
-    // let jpk = json!(pk).to_string();
-
     let circuit_instance = circuit.instance();
     circuit_proof.instance = collect_instance_hex(&circuit_instance);
     let mut proof_bytes = Vec::new();
@@ -435,53 +326,14 @@ async fn verify_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
         proof_bytes.push(*b);
     }
 
-    // let sample = circuit_instance[0][0];
-    // let raw = sample.to_raw_bytes();
-    println!("proof file instances: {:?}", proofs.circuit.instance);
-    println!("generated instances: {:?}", circuit_instance);
-    // println!("raw bytes: {:?}", raw);
-
-    // let jinstance = json!(circuit_instance).to_string();
-
     let mut frs: Vec<Fr> = Vec::new();
     let instance_strs = proofs.circuit.instance.clone();
-    for val in instance_strs {
-        let u = U256::from_str(val.as_str()).unwrap();
-        println!("u {:#066x}", u);
-
-        let temp = u.to_be_bytes();
-        let d = u64::from_be_bytes(temp[0..8].try_into().unwrap());
-        let c = u64::from_be_bytes(temp[8..16].try_into().unwrap());
-        let b = u64::from_be_bytes(temp[16..24].try_into().unwrap());
-        let a = u64::from_be_bytes(temp[24..32].try_into().unwrap());
-        println!("  a {:#x}", a);
-        println!("  b {:#x}", b);
-        println!("  c {:#x}", c);
-        println!("  d {:#x}", d);
-
-        // let temp = u.to_be_bytes();
-        // // let a = temp.read_u64::<BigEndian>().unwrap();
-
-        // let a = u64::from_be_bytes(temp);
-
-        let fr = Fr::from_raw([a, b, c, d]);
-        println!("  did it {:?}", fr);
+    for i in instance_strs {
+        let fr = fr_from_string(i);
         frs.push(fr);
     }
 
     let my_instances: Vec<Vec<Fr>> = vec![frs];
-
-    // // let u = U256::from_str(trim.as_str()).unwrap();
-    // let mut frs: Vec<Fr> = Vec::new();
-    // let temp = proofs.circuit.instance.clone();
-    // for val in temp {
-    //     let fr: Fr = Fr::from_bytes(&U256::from_str(val.as_str()).unwrap().to_be_bytes()).unwrap();
-    //     println!("  fr: {:?}", fr);
-    //     frs.push(fr);
-    // }
-
-    // let my_instances: Vec<Vec<Fr>> = vec![frs];
-    // println!("my_instances: {:?}", my_instances);
 
     let _proof = verify::<_, EvmTranscript<G1Affine, _, _, _>>(
         proof_bytes,
@@ -512,7 +364,6 @@ macro_rules! compute_proof_wrapper {
 
 macro_rules! compute_verifier_wrapper {
     ($shared_state:expr, $task_options:expr, $witness:expr, $CIRCUIT:ident) => {{
-        let timing = Instant::now();
         let circuit = $CIRCUIT::<
             { CIRCUIT_CONFIG.max_txs },
             { CIRCUIT_CONFIG.max_calldata },
@@ -520,7 +371,6 @@ macro_rules! compute_verifier_wrapper {
             { CIRCUIT_CONFIG.max_copy_rows },
             _,
         >(&$witness, fixed_rng())?;
-        let timing = Instant::now().duration_since(timing).as_millis() as u32;
         verify_proof(&$shared_state, &$task_options, CIRCUIT_CONFIG, circuit).await;
         // circuit_proof.aux.circuit = timing;
         // (circuit_config, circuit_proof, aggregation_proof)
@@ -686,28 +536,13 @@ impl SharedState {
             let self_copy = self.clone();
             let prover_mode = task_options_copy.prover_mode;
             tokio::spawn(async move {
-                // let time1 = Instant::now().elapsed().as_millis();
                 let time1 = SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
                     .as_millis();
-                println!("time1 {:?}", time1);
-
-                // let ur = "0x00000000000000000000000000000000a00f57a134784519472096820e92cec2"
-                //     .to_string();
-                // println!("ur   = {}", ur);
-                // let trim = ur.as_str()[2..].to_string();
-                // println!("trim = {}", trim);
-                // let u = U256::from_str(ur.as_str()).unwrap();
-                // println!("u {:?}", u);
-                // let u = U256::from_str(trim.as_str()).unwrap();
-                // println!("u {:#066x}", u);
-
-                // exit(0);
 
                 let witness = match prover_mode {
                     ProverMode::WitnessCapture | ProverMode::LegacyProver => {
-                        println!("call from_request");
                         CircuitWitness::from_request(&mut task_options_copy)
                             .await
                             .map_err(|e| e.to_string())?
@@ -719,11 +554,9 @@ impl SharedState {
                         .unwrap();
                         serde_json::from_str(&jwitness).unwrap()
                     }
-                    _ => panic!("no valid PROVERD_MODE"),
                 };
 
                 if prover_mode == ProverMode::Verifier {
-                    println!("start on verifier");
                     crate::match_circuit_params!(
                         witness.gas_used(),
                         {
@@ -752,15 +585,13 @@ impl SharedState {
                         .unwrap()
                         .as_millis();
 
-                    println!("time2 {:?}", time2);
-                    println!("delta {:?}", time2 - time1);
+                    println!("duration {:?} ms", time2 - time1);
                     exit(0);
                 }
 
                 if prover_mode == ProverMode::WitnessCapture {
                     let jwitness = json!(witness).to_string();
                     write(task_options_copy.witness_path.clone().unwrap(), jwitness).unwrap();
-                    println!("done creating witness");
                     exit(1);
                 }
 
@@ -852,106 +683,22 @@ impl SharedState {
                     gas: witness.gas_used(),
                 };
 
-                println!(
-                    "proof.aggregation.proof.len() {}",
-                    res.aggregation.proof.len()
-                );
-                // START
-                // let proof = res.clone();
-                // // choose the aggregation proof if not empty
-                // let (is_aggregated, proof_result) = {
-                //     if proof.aggregation.proof.len() != 0 {
-                //         (true, proof.aggregation)
-                //     } else {
-                //         (false, proof.circuit)
-                //     }
-                // };
-
-                // println!("next 1");
-
-                // let mut verifier_calldata = vec![];
-                // let mut tmp_buf = vec![0u8; 32];
-                // let block = witness.eth_block;
-                // println!("next 2");
-
-                // // proof_result.instance.iter().for_each(|vstr| {
-                // //     println!("next 3");
-                // //     println!("vstr {:?}", vstr);
-                // //     let temp = vstr.as_str()[2..].to_string();
-                // //     println!("temp {:?}", temp);
-
-                // //     let v = U256::from(temp.as_bytes());
-                // //     println!("v {:?}", v);
-                // //     println!("tmp_buf len {:?}", tmp_buf.len());
-                // //     // let v = U256::from_str(vstr);
-                // //     v.to_big_endian(&mut tmp_buf);
-                // //     verifier_calldata.extend_from_slice(&tmp_buf);
-                // // });
-                // println!("next 4");
-                // verifier_calldata.extend_from_slice(proof_result.proof.as_ref());
-                // println!("next 5");
-
-                // let mut proof_data = vec![];
-                // proof_data.extend_from_slice(block.hash.unwrap().as_ref());
-                // println!("next 6");
-
-                // // this is temporary until proper contract setup
-                // let verifier_addr = U256::from(proof_result.label.as_bytes());
-                // println!("next 7");
-
-                // verifier_addr.to_big_endian(&mut tmp_buf);
-                // println!("next 8");
-                // proof_data.extend_from_slice(&tmp_buf);
-                // println!("next 9");
-
-                // let is_aggregated = match is_aggregated {
-                //     true => U256::one(),
-                //     false => U256::zero(),
-                // };
-                // println!("next 10");
-                // is_aggregated.to_big_endian(&mut tmp_buf);
-                // proof_data.extend_from_slice(&tmp_buf);
-                // println!("next 11");
-
-                // proof_data.extend_from_slice(&verifier_calldata);
-                // println!("next 12");
-
-                // let abi = get_abi();
-                // println!("next 13");
-
-                // let proof_data = Bytes::from(proof_data);
-                // println!("next 14");
-                // // println!("proof_data: {:x?}", proof_data);
-                // let calldata = abi
-                //     .function("finalizeBlock")
-                //     .unwrap()
-                //     .encode_input(&[proof_data.into_token()])
-                //     .expect("calldata");
-
-                // println!("next 15");
-                // // println!("calldata: {:x?}", calldata);
-                // // let l1_bridge_addr = Some(self.config.lock().await.l1_bridge);
-                // // self.transaction_to_l1(l1_bridge_addr, U256::zero(), calldata)
-                // //     .await
-                // //     .expect("receipt");
-                // END
                 let time2 = SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
                     .as_millis();
-
-                println!("time2 {:?}", time2);
-                println!("delta {:?}", time2 - time1);
 
                 if prover_mode != ProverMode::WitnessCapture {
                     let jproof = json!(res).to_string();
                     // let jcalldata = json!(calldata).to_string();
                     write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
                     // write("calldata.json", jcalldata).unwrap();
-                    println!("done creating proof: write and exit");
+                    println!("duration {:?} ms", time2 - time1);
+                    println!("done creating proof");
                     exit(1);
                 }
 
+                println!("duration {:?} ms", time2 - time1);
                 Ok(res)
             })
             .await
@@ -1323,11 +1070,9 @@ mod test {
         >(&witness, fixed_rng())
         .unwrap();
 
-        println!("ready to compute proof");
         let proof = compute_proof(&ss, &dummy_req, CIRCUIT_CONFIG, super_circuit)
             .await
             .unwrap();
-        println!("proof={:?}", proof);
         Ok(())
     }
 
@@ -1513,11 +1258,9 @@ mod test {
         >(&witness, fixed_rng())
         .unwrap();
 
-        println!("ready to compute proof");
         let proof = compute_proof(&ss, &dummy_req, CIRCUIT_CONFIG, super_circuit)
             .await
             .unwrap();
-        println!("proof={:?}", proof);
         Ok(())
     }
 }

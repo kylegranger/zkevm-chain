@@ -49,7 +49,6 @@ pub fn gen_proof<
     verify: bool,
     aux: &mut ProofResultInstrumentation,
 ) -> Vec<u8> {
-    println!("gen_proof");
     let mut transcript = TW::init(Vec::new());
     let inputs: Vec<&[Fr]> = instance.iter().map(|v| v.as_slice()).collect();
     let res = {
@@ -84,10 +83,7 @@ pub fn gen_proof<
 
     let proof = transcript.finalize();
     if verify {
-        println!("V: 1");
         let mut transcript = TR::init(Cursor::new(proof.clone()));
-        println!("V: 2");
-        println!("V: inputs: {:?}", inputs);
         let res = {
             let time_started = Instant::now();
             let v = verify_proof::<_, VerifierGWC<_>, _, TR, _>(
@@ -100,8 +96,6 @@ pub fn gen_proof<
             aux.verify = Instant::now().duration_since(time_started).as_millis() as u32;
             v
         };
-        println!("V: res {:?}", res);
-
         if let Err(verify_err) = res {
             if mock_feedback {
                 let res = {
@@ -132,11 +126,8 @@ pub fn verify<
     instance: Vec<Vec<Fr>>,
     aux: &mut ProofResultInstrumentation,
 ) {
-    println!("verify");
     //    if verify {
-    println!("verify: 1");
     let mut transcript = TR::init(Cursor::new(proof.clone()));
-    println!("verify: 2");
     let inputs: Vec<&[Fr]> = instance.iter().map(|v| v.as_slice()).collect();
 
     let res = {
@@ -151,20 +142,9 @@ pub fn verify<
         aux.verify = Instant::now().duration_since(time_started).as_millis() as u32;
         v
     };
-    println!("verify: res {:?}", res);
+    println!("verify result: {:?}", res);
 
     if let Err(verify_err) = res {
-        // if mock_feedback {
-        //     let res = {
-        //         let time_started = Instant::now();
-        //         let v = MockProver::run(params.k(), &circuit, instance)
-        //             .expect("MockProver::run")
-        //             .verify_par();
-        //         aux.mock = Instant::now().duration_since(time_started).as_millis() as u32;
-        //         v
-        //     };
-        //     panic!("verify_proof: {verify_err:#?}\nMockProver: {res:#?}");
-        // } else {
         panic!("verify_proof: {verify_err:#?}");
     }
 }
