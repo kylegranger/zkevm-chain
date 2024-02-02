@@ -49,6 +49,7 @@ itertools = "0.10.3"
 clap = { version = "4.0.14", features = ["derive", "env"] }
 hex = "0.4.3"
 lazy_static = "1.4"
+libc = "0.2.153"
 
 # autogen
 mock = { git = "https://github.com/kylegranger/zkevm-circuits.git", branch = "kyle-dev", optional = true }
@@ -61,3 +62,4 @@ default = []
 autogen = ["mock", "ethers-signers", "zkevm_dev", "paste"]
 evm-verifier = []
 eip-1559-only = []
+

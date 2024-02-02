@@ -50,4 +50,20 @@ fn main() {
         "cargo:rustc-env=PROVER_VERSION={}",
         version.replace('\n', "")
     );
+
+    println!("cargo:rustc-link-lib=static=solc");
+    println!("cargo:rustc-link-lib=static=solidity");
+    println!("cargo:rustc-link-lib=static=evmasm");
+    println!("cargo:rustc-link-lib=static=smtutil");
+    println!("cargo:rustc-link-lib=static=yul");
+    println!("cargo:rustc-link-lib=static=yulInterpreter");
+    println!("cargo:rustc-link-lib=static=langutil");
+    println!("cargo:rustc-link-lib=static=solutil");
+    println!("cargo:rustc-link-lib=static=jsoncpp");
+    println!("cargo:rustc-link-lib=static=stdc++");
+    println!("cargo:rustc-link-lib=static=gcc");
+    println!("cargo:rustc-link-lib=static=boost_filesystem");
+    println!("cargo:rustc-link-search=native=/usr/lib/gcc/x86_64-linux-gnu/11");
+    println!("cargo:rustc-link-search=native=/usr/lib/x86_64-linux-gnu");
+    println!("cargo:rustc-link-search=/home/ader/dev/eiger/gev/kyle-zkevm-chain/lib");
 }

@@ -7,10 +7,13 @@ use crate::Fr;
 use crate::G1Affine;
 use crate::ProverKey;
 use crate::ProverParams;
+
 use eth_types::Bytes;
 use eth_types::ToBigEndian;
 use eth_types::U256;
-use serde_json::json;
+use hex::decode;
+use serde_json::{json, Value};
+use snark_verifier::loader::evm::compile_solidity;
 use std::fs::write;
 use std::process::exit;
 use std::str::FromStr;
@@ -50,34 +53,63 @@ use zkevm_circuits::util::SubCircuit;
 use zkevm_common::json_rpc::jsonrpc_request_client;
 use zkevm_common::prover::*;
 
-// // fn get_abi() -> Abi {
-// //     AbiParser::default()
-// //         .parse(&[
-// //                "function testPublicInputCommitment(uint256 MAX_TXS, uint256 MAX_CALLDATA, uint256 chainId, uint256 parentStateRoot, bytes calldata witness) returns (uint256[])",
-// //         ])
-// //         .expect("parse abi")
-// // }
+use libc::c_char;
+use std::ffi::CStr;
+use std::ffi::CString;
+use std::str;
 
-// fn get_abi() -> Abi {
-//     AbiParser::default()
-//         .parse(&[
-//             "event BlockSubmitted()",
-//             "event BlockFinalized(bytes32 blockHash)",
-//             "event MessageDispatched(address from, address to, uint256 value, uint256 fee, uint256 deadline, uint256 nonce, bytes data)",
-//             "event MessageDelivered(bytes32 id)",
-//             "function submitBlock(bytes)",
-//             "function finalizeBlock(bytes proof)",
-//             "function deliverMessageWithProof(address from, address to, uint256 value, uint256 fee, uint256 deadline, uint256 nonce, bytes data, bytes proof)",
-//             "function stateRoots(bytes32 blockHash) returns (bytes32)",
-//             "function importForeignBlock(uint256 blockNumber, bytes32 blockHash)",
-//             "function initGenesis(bytes32 blockHash, bytes32 stateRoot)",
-//             "function buildCommitment(bytes) returns (uint256[])",
-//             "function importForeignBridgeState(bytes, bytes)",
-//             "function multicall()",
-//             "function getTimestampForStorageRoot(bytes32 storageRoot) returns (uint256)",
-//         ])
-//         .expect("parse abi")
-// }
+extern "C" {
+    fn gevulot_compile(src: *const c_char) -> *const c_char;
+}
+
+fn local_compile_solidity(code: String) -> Vec<u8> {
+    let template = r#"{
+        "language": "Solidity",
+        "sources": {
+            "fileA": {
+                "content": "asdf"
+            }
+        },
+        "settings": {
+            "outputSelection": {
+                "fileA": {
+                    "*": [
+                        "evm.bytecode"
+                    ]
+                }
+            }
+        }
+    }"#
+    .to_string();
+
+    println!("code len {:?}", code.len());
+
+    let request = template.replace("asdf", &code);
+
+    let c_string = CString::new(request).expect("CString::new failed");
+    let cstr = c_string.into_raw(); // Move ownership to C
+    let c_buf: *const c_char = unsafe { gevulot_compile(cstr) };
+    let c_str: &CStr = unsafe { CStr::from_ptr(c_buf) };
+    let response: &str = c_str.to_str().unwrap();
+
+    let m: HashMap<String, Value> = serde_json::from_str(&response).unwrap();
+    let contracts = m.get("contracts").unwrap();
+    let filea = contracts.get("fileA").unwrap();
+    let halo2 = filea.get("Halo2Verifier").unwrap();
+    let evm = halo2.get("evm").unwrap();
+    let bytecode = evm.get("bytecode").unwrap();
+    let object = bytecode
+        .get("object")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let decoded = hex::decode(object).expect("Decoding failed");
+
+    println!("decoded len{:?}", decoded.len());
+    decoded
+}
 
 fn get_param_path(path: &String, k: usize) -> PathBuf {
     // try to automatically choose a file if the path is a folder.
@@ -324,8 +356,8 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                         evm_verifier_helper::AccumulationSchemeType::GwcType,
                     );
                     println!("deployment_code len {:?}", deployment_code.len());
-                    let evm_verifier_bytecode =
-                        evm_verifier_helper::evm::compile_solidity(&deployment_code);
+                    let evm_verifier_bytecode = local_compile_solidity(deployment_code);
+
                     println!(
                         "evm_verifier_bytecode len {:?}",
                         evm_verifier_bytecode.len()
@@ -596,6 +628,7 @@ impl SharedState {
                     .unwrap()
                     .as_millis();
 
+
                 if prover_mode == ProverMode::Verifier {
                     let jproof = std::fs::read_to_string(
                         task_options_copy.clone().proof_path.unwrap(),
@@ -634,14 +667,6 @@ impl SharedState {
                     witness.gas_used(),
                     {
                         match task_options_copy.circuit.as_str() {
-                            // "pi" => {
-                            //     compute_proof_wrapper!(
-                            //         self_copy,
-                            //         task_options_copy,
-                            //         &witness,
-                            //         gen_pi_circuit
-                            //     )
-                            // }
                             "super" => {
                                 compute_proof_wrapper!(
                                     self_copy,
@@ -650,56 +675,6 @@ impl SharedState {
                                     gen_super_circuit
                                 )
                             }
-                            // "evm" => {
-                            //     compute_proof_wrapper!(
-                            //         self_copy,
-                            //         task_options_copy,
-                            //         &witness,
-                            //         gen_evm_circuit
-                            //     )
-                            // }
-                            // "state" => compute_proof_wrapper!(
-                            //     self_copy,
-                            //     task_options_copy,
-                            //     &witness,
-                            //     gen_state_circuit
-                            // ),
-                            // "tx" => {
-                            //     compute_proof_wrapper!(
-                            //         self_copy,
-                            //         task_options_copy,
-                            //         &witness,
-                            //         gen_tx_circuit
-                            //     )
-                            // }
-                            // "bytecode" => compute_proof_wrapper!(
-                            //     self_copy,
-                            //     task_options_copy,
-                            //     &witness,
-                            //     gen_bytecode_circuit
-                            // ),
-                            // "copy" => {
-                            //     compute_proof_wrapper!(
-                            //         self_copy,
-                            //         task_options_copy,
-                            //         &witness,
-                            //         gen_copy_circuit
-                            //     )
-                            // }
-                            // "exp" => {
-                            //     compute_proof_wrapper!(
-                            //         self_copy,
-                            //         task_options_copy,
-                            //         &witness,
-                            //         gen_exp_circuit
-                            //     )
-                            // }
-                            // "keccak" => compute_proof_wrapper!(
-                            //     self_copy,
-                            //     task_options_copy,
-                            //     &witness,
-                            //     gen_keccak_circuit
-                            // ),
                             _ => panic!("unknown circuit"),
                         }
                     },
