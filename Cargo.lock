@@ -735,7 +735,7 @@ checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 [[package]]
 name = "bus-mapping"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-primitives",
@@ -854,7 +854,7 @@ dependencies = [
 [[package]]
 name = "circuit-benchmarks"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "ark-std 0.3.0",
  "bus-mapping",
@@ -1463,7 +1463,7 @@ dependencies = [
 [[package]]
 name = "eth-types"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "ethers-core",
  "ethers-signers",
@@ -1625,7 +1625,7 @@ dependencies = [
 [[package]]
 name = "external-tracer"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "eth-types",
  "geth-utils",
@@ -1824,7 +1824,7 @@ dependencies = [
 [[package]]
 name = "gadgets"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "digest 0.7.6",
  "eth-types",
@@ -1865,7 +1865,7 @@ dependencies = [
 [[package]]
 name = "geth-utils"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "env_logger",
  "gobuild",
@@ -2390,7 +2390,7 @@ dependencies = [
 [[package]]
 name = "keccak256"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "env_logger",
  "eth-types",
@@ -2578,7 +2578,7 @@ dependencies = [
 [[package]]
 name = "mock"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "eth-types",
  "ethers-core",
@@ -5108,7 +5108,7 @@ dependencies = [
 [[package]]
 name = "zkevm-circuits"
 version = "0.1.0"
-source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#e722e5bcc4b07507f429d43708cb7c52d68e0162"
+source = "git+https://github.com/kylegranger/zkevm-circuits.git?branch=kyle-dev#addfb6b192dbf6aaad12ff2e93879eeeff89d7e9"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-primitives",

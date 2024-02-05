@@ -11,9 +11,7 @@ use crate::ProverParams;
 use eth_types::Bytes;
 use eth_types::ToBigEndian;
 use eth_types::U256;
-use hex::decode;
 use serde_json::{json, Value};
-use snark_verifier::loader::evm::compile_solidity;
 use std::fs::write;
 use std::process::exit;
 use std::str::FromStr;
@@ -21,8 +19,9 @@ use std::time::SystemTime;
 
 // #[cfg(feature = "evm-verifier")]
 mod evm_verifier_helper {
-    pub use circuit_benchmarks::taiko_super_circuit::{evm_verify, gen_verifier};
-    pub use snark_verifier::loader::evm;
+    pub use circuit_benchmarks::taiko_super_circuit::{
+        evm_verify, gen_verifier, gevulot_evm_verify,
+    };
     pub use zkevm_circuits::root_circuit::taiko_aggregation::AccumulationSchemeType;
     pub use zkevm_circuits::root_circuit::Config;
 }
@@ -425,7 +424,7 @@ fn bytes_to_vec(bytes: Bytes) -> Vec<u8> {
     result
 }
 
-fn verify_from_proof(proofs: Proofs) {
+pub fn verify(proofs: Proofs) -> bool {
     let mut instances = Vec::new();
     for i in proofs.aggregation.instance {
         let fr = fr_from_string(i);
@@ -439,8 +438,9 @@ fn verify_from_proof(proofs: Proofs) {
 
     println!("bytecode len is {}", bytecode.len());
     println!("proof len is {}", proof.len());
-    evm_verifier_helper::evm_verify(bytecode, instances, proof);
-    println!("done evm_verify");
+    let result = evm_verifier_helper::gevulot_evm_verify(bytecode, instances, proof);
+    println!("gevulot_evm_verify result: {:?}", result);
+    result.is_ok()
 }
 
 macro_rules! compute_proof_wrapper {
@@ -633,7 +633,7 @@ impl SharedState {
                     )
                     .unwrap();
                     let proofs: Proofs = serde_json::from_str(&jproof).unwrap();
-                    verify_from_proof(proofs);
+                    let _result = verify(proofs);
                     exit(0);
                 }
 
@@ -762,26 +762,14 @@ impl SharedState {
         }
     }
 
-    pub fn gevulot_prover(&self, task_options: &ProofRequestOptions) -> Result<Proofs, String> {
-        // // spawn a task to catch panics
-        // let task_result: Result<Result<Proofs, String> = {
-        let mut task_options_copy = task_options.clone();
+    pub fn prove(&self, task_options: &ProofRequestOptions) -> Result<Proofs, String> {
+        let task_options_copy = task_options.clone();
         let self_copy = self.clone();
-        let prover_mode = task_options_copy.prover_mode;
-        // tokio::spawn(async move {
-        // let time1 = Instant::now().elapsed().as_millis();
+        // let prover_mode = task_options_copy.prover_mode;
         let time1 = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_millis();
-
-        if prover_mode == ProverMode::Verifier {
-            let jproof =
-                std::fs::read_to_string(task_options_copy.clone().proof_path.unwrap()).unwrap();
-            let proofs: Proofs = serde_json::from_str(&jproof).unwrap();
-            verify_from_proof(proofs);
-            exit(0);
-        }
 
         let witness: CircuitWitness = {
             let jwitness =
@@ -834,38 +822,7 @@ impl SharedState {
 
         println!("duration {:?} ms", time2 - time1);
 
-        if prover_mode != ProverMode::WitnessCapture {
-            let jproof = json!(res).to_string();
-            write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
-            println!(
-                "done creating and writing proof to {:?}",
-                task_options_copy.proof_path.unwrap()
-            );
-            exit(1);
-        }
-
         Ok(res)
-        // }
-        // }
-
-        // // convert the JoinError to string - if applicable
-        // let task_result: Result<Proofs, String> = match task_result {
-        //     Err(err) => match err.is_panic() {
-        //         true => {
-        //             let panic = err.into_panic();
-
-        //             if let Some(msg) = panic.downcast_ref::<&str>() {
-        //                 Err(msg.to_string())
-        //             } else if let Some(msg) = panic.downcast_ref::<String>() {
-        //                 Err(msg.to_string())
-        //             } else {
-        //                 Err("unknown panic".to_string())
-        //             }
-        //         }
-        //         false => Err(err.to_string()),
-        //     },
-        //     Ok(val) => val,
-        // };
     }
 
     /// Returns `node_id` and `tasks` for this instance.

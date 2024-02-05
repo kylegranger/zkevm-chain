@@ -287,6 +287,7 @@ impl CircuitWitness {
 }
 
 mod test {
+    #[allow(unused_imports)]
     use super::*;
 
     #[tokio::test]
