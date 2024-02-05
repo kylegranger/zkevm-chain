@@ -149,7 +149,7 @@ fn get_or_gen_param(task_options: &ProofRequestOptions, k: usize) -> (Arc<Prover
     }
 }
 
-async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
+fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
     shared_state: &SharedState,
     task_options: &ProofRequestOptions,
     circuit_config: CircuitConfig,
@@ -225,7 +225,6 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                     &circuit,
                     &mut circuit_proof.aux,
                 )
-                .await
                 .map_err(|e| e.to_string())?
         };
 
@@ -288,7 +287,6 @@ async fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>
                         &agg_circuit,
                         &mut aggregation_proof.aux,
                     )
-                    .await
                     .map_err(|e| e.to_string())?
             };
             println!(
@@ -457,7 +455,7 @@ macro_rules! compute_proof_wrapper {
         >(&$witness, fixed_rng())?;
         let timing = Instant::now().duration_since(timing).as_millis() as u32;
         let (circuit_config, mut circuit_proof, aggregation_proof, bytecode) =
-            compute_proof(&$shared_state, &$task_options, CIRCUIT_CONFIG, circuit).await?;
+            compute_proof(&$shared_state, &$task_options, CIRCUIT_CONFIG, circuit)?;
         circuit_proof.aux.circuit = timing;
         (circuit_config, circuit_proof, aggregation_proof, bytecode)
     }};
@@ -764,6 +762,112 @@ impl SharedState {
         }
     }
 
+    pub fn gevulot_prover(&self, task_options: &ProofRequestOptions) -> Result<Proofs, String> {
+        // // spawn a task to catch panics
+        // let task_result: Result<Result<Proofs, String> = {
+        let mut task_options_copy = task_options.clone();
+        let self_copy = self.clone();
+        let prover_mode = task_options_copy.prover_mode;
+        // tokio::spawn(async move {
+        // let time1 = Instant::now().elapsed().as_millis();
+        let time1 = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        if prover_mode == ProverMode::Verifier {
+            let jproof =
+                std::fs::read_to_string(task_options_copy.clone().proof_path.unwrap()).unwrap();
+            let proofs: Proofs = serde_json::from_str(&jproof).unwrap();
+            verify_from_proof(proofs);
+            exit(0);
+        }
+
+        let witness: CircuitWitness = {
+            let jwitness =
+                std::fs::read_to_string(task_options_copy.clone().witness_path.unwrap()).unwrap();
+            serde_json::from_str(&jwitness).unwrap()
+        };
+
+        let (config, circuit_proof, aggregation_proof, bytecode) = crate::match_circuit_params!(
+            witness.gas_used(),
+            {
+                match task_options_copy.circuit.as_str() {
+                    "super" => {
+                        compute_proof_wrapper!(
+                            self_copy,
+                            task_options_copy,
+                            &witness,
+                            gen_super_circuit
+                        )
+                    }
+                    _ => panic!("unknown circuit"),
+                }
+            },
+            {
+                return Err(format!(
+                    "No circuit parameters found for block with gas used={}",
+                    witness.gas_used()
+                ));
+            }
+        );
+
+        let bytes: Bytes = Bytes::from_iter(bytecode);
+
+        let res = Proofs {
+            config,
+            circuit: circuit_proof,
+            aggregation: aggregation_proof,
+            gas: witness.gas_used(),
+            bytecode: bytes,
+        };
+
+        println!(
+            "proof.aggregation.proof.len() {}",
+            res.aggregation.proof.len()
+        );
+
+        let time2 = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        println!("duration {:?} ms", time2 - time1);
+
+        if prover_mode != ProverMode::WitnessCapture {
+            let jproof = json!(res).to_string();
+            write(task_options_copy.proof_path.clone().unwrap(), jproof).unwrap();
+            println!(
+                "done creating and writing proof to {:?}",
+                task_options_copy.proof_path.unwrap()
+            );
+            exit(1);
+        }
+
+        Ok(res)
+        // }
+        // }
+
+        // // convert the JoinError to string - if applicable
+        // let task_result: Result<Proofs, String> = match task_result {
+        //     Err(err) => match err.is_panic() {
+        //         true => {
+        //             let panic = err.into_panic();
+
+        //             if let Some(msg) = panic.downcast_ref::<&str>() {
+        //                 Err(msg.to_string())
+        //             } else if let Some(msg) = panic.downcast_ref::<String>() {
+        //                 Err(msg.to_string())
+        //             } else {
+        //                 Err("unknown panic".to_string())
+        //             }
+        //         }
+        //         false => Err(err.to_string()),
+        //     },
+        //     Ok(val) => val,
+        // };
+    }
+
     /// Returns `node_id` and `tasks` for this instance.
     /// Normally used for the rpc api.
     pub async fn get_node_information(&self) -> NodeInformation {
@@ -818,14 +922,14 @@ impl SharedState {
     // https://github.com/zcash/halo2/issues/443
     // https://github.com/zcash/halo2/issues/449
     /// Compute or retrieve a proving key from cache.
-    async fn gen_pk<C: Circuit<Fr>>(
+    fn gen_pk<C: Circuit<Fr>>(
         &self,
         cache_key: &str,
         param: &Arc<ProverParams>,
         circuit: &C,
         aux: &mut ProofResultInstrumentation,
     ) -> Result<Arc<ProverKey>, Box<dyn std::error::Error>> {
-        let mut rw = self.rw.lock().await;
+        let mut rw = self.rw.blocking_lock();
         if !rw.pk_cache.contains_key(cache_key) {
             // drop, potentially long running
             drop(rw);
@@ -853,7 +957,7 @@ impl SharedState {
             let pk = Arc::new(pk);
 
             // acquire lock and update
-            rw = self.rw.lock().await;
+            rw = self.rw.blocking_lock();
             rw.pk_cache.insert(cache_key.to_string(), pk);
 
             log::info!("ProvingKey: generated and cached key={}", cache_key);
@@ -1087,9 +1191,7 @@ mod test {
         .unwrap();
 
         println!("ready to compute proof");
-        let proof = compute_proof(&ss, &dummy_req, CIRCUIT_CONFIG, super_circuit)
-            .await
-            .unwrap();
+        let proof = compute_proof(&ss, &dummy_req, CIRCUIT_CONFIG, super_circuit).unwrap();
         println!("proof={:?}", proof);
         Ok(())
     }
@@ -1277,9 +1379,7 @@ mod test {
         .unwrap();
 
         println!("ready to compute proof");
-        let proof = compute_proof(&ss, &dummy_req, CIRCUIT_CONFIG, super_circuit)
-            .await
-            .unwrap();
+        let proof = compute_proof(&ss, &dummy_req, CIRCUIT_CONFIG, super_circuit).unwrap();
         println!("proof={:?}", proof);
         Ok(())
     }
