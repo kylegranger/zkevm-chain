@@ -249,6 +249,7 @@ fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
             );
 
             let snark = gen_snark_gwc(&circuit_param, &pk, circuit, None::<&str>);
+            println!("agg 1");
             circuit_proof.proof = snark.proof.clone().into();
             if std::env::var("PROVERD_DUMP").is_ok() {
                 File::create(format!(
@@ -259,6 +260,7 @@ fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
                 .write_all(&snark.proof)
                 .unwrap();
             }
+            println!("agg 2");
 
             if aggregation_param.k() as usize > circuit_config.min_k_aggregation {
                 aggregation_param.downsize(circuit_config.min_k_aggregation as u32);
@@ -274,11 +276,14 @@ fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
                 v
             };
 
+            println!("agg 3");
+
             let agg_pk = {
                 let cache_key = format!(
                     "{}-agg-{}{:?}",
                     &task_options.circuit, &agg_param_path, &circuit_config
                 );
+                println!("agg 3a");
                 shared_state
                     .gen_pk(
                         &cache_key,
@@ -296,6 +301,7 @@ fn compute_proof<C: Circuit<Fr> + Clone + SubCircuit<Fr> + CircuitExt<Fr>>(
                     .as_millis()
                     - start
             );
+            println!("agg 4");
 
             let agg_instance = agg_circuit.instance();
             for fr in &agg_instance[0] {
@@ -483,6 +489,7 @@ pub struct RwState {
 pub struct SharedState {
     pub ro: RoState,
     pub rw: Arc<Mutex<RwState>>,
+    pub rwstate: Arc<RwState>,
 }
 
 impl SharedState {
@@ -498,6 +505,12 @@ impl SharedState {
                 pending: None,
                 obtained: false,
             })),
+            rwstate: Arc::new(RwState {
+                tasks: Vec::new(),
+                pk_cache: HashMap::new(),
+                pending: None,
+                obtained: false,
+            }),
         }
     }
 
@@ -886,41 +899,43 @@ impl SharedState {
         circuit: &C,
         aux: &mut ProofResultInstrumentation,
     ) -> Result<Arc<ProverKey>, Box<dyn std::error::Error>> {
-        let mut rw = self.rw.blocking_lock();
-        if !rw.pk_cache.contains_key(cache_key) {
-            // drop, potentially long running
-            drop(rw);
+        // let mut rw = self.rw.lock().unwrap();
+        // let mut rw = &self.rwstate;
+        // if !rw.pk_cache.contains_key(cache_key) {
+        //     // drop, potentially long running
+        //     drop(rw);
 
-            let vk = {
-                let time_started = Instant::now();
-                let vk = keygen_vk(param.as_ref(), circuit)?;
-                aux.vk = Instant::now().duration_since(time_started).as_millis() as u32;
-                vk
-            };
-            let pk = {
-                let time_started = Instant::now();
-                let pk = keygen_pk(param.as_ref(), vk, circuit)?;
-                aux.pk = Instant::now().duration_since(time_started).as_millis() as u32;
-                pk
-            };
-            if std::env::var("PROVERD_DUMP").is_ok() {
-                pk.write(
-                    &mut File::create(cache_key).unwrap(),
-                    SerdeFormat::RawBytesUnchecked,
-                )
-                .unwrap();
-            }
-
-            let pk = Arc::new(pk);
-
-            // acquire lock and update
-            rw = self.rw.blocking_lock();
-            rw.pk_cache.insert(cache_key.to_string(), pk);
-
-            log::info!("ProvingKey: generated and cached key={}", cache_key);
+        let vk = {
+            let time_started = Instant::now();
+            let vk = keygen_vk(param.as_ref(), circuit)?;
+            aux.vk = Instant::now().duration_since(time_started).as_millis() as u32;
+            vk
+        };
+        let pk = {
+            let time_started = Instant::now();
+            let pk = keygen_pk(param.as_ref(), vk, circuit)?;
+            aux.pk = Instant::now().duration_since(time_started).as_millis() as u32;
+            pk
+        };
+        if std::env::var("PROVERD_DUMP").is_ok() {
+            pk.write(
+                &mut File::create(cache_key).unwrap(),
+                SerdeFormat::RawBytesUnchecked,
+            )
+            .unwrap();
         }
 
-        Ok(rw.pk_cache.get(cache_key).unwrap().clone())
+        let pk = Arc::new(pk);
+
+        // acquire lock and update
+        // rw = self.rw.blocking_lock();
+        // rw.pk_cache.insert(cache_key.to_string(), pk);
+
+        log::info!("ProvingKey: generated and cached key={}", cache_key);
+        // }
+        println!("done gen key");
+
+        Ok(pk)
     }
 
     async fn merge_tasks(&self, node_info: &NodeInformation) {
